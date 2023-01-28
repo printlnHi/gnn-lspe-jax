@@ -1,0 +1,15 @@
+
+epoch: 0, loss: 0.2843891382217407, acc: 0.0
+epoch: 50, loss: 0.0006321120890788734, acc: 1.0
+epoch: 100, loss: 0.0013380241580307484, acc: 1.0
+epoch: 150, loss: 0.04702799394726753, acc: 1.0
+epoch: 200, loss: 0.041739702224731445, acc: 1.0
+epoch: 250, loss: 0.0028245325665920973, acc: 1.0
+epoch: 300, loss: 0.047925908118486404, acc: 1.0
+epoch: 350, loss: 0.032259102910757065, acc: 1.0
+epoch: 400, loss: 0.0030686105601489544, acc: 1.0
+epoch: 450, loss: 0.036227986216545105, acc: 1.0
+Training finished
+Evaluated 1 graphs
+Completed evaluation.
+Eval loss: 0.14461465179920197, accuracy 0.7567567825317383
