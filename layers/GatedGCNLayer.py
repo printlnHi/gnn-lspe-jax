@@ -1,3 +1,10 @@
+import haiku as hk
+import jax
+import jax.numpy as jnp
+import jax.tree_util as tree
+import jraph
+from typing import Callable
+
 def GatedGCNLayer(output_dim, residual=True, dropout=0.0) -> Callable:
   """Returns a method that applies a GatedGCN layer.
 

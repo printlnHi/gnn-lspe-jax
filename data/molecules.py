@@ -8,7 +8,7 @@ import numpy as np
 
 import csv
 
-#import dgl
+import dgl
 
 from scipy import sparse as sp
 import numpy as np
