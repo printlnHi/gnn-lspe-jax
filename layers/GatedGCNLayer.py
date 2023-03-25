@@ -5,13 +5,14 @@ import jax.tree_util as tree
 import jraph
 from typing import Callable
 
-def GatedGCNLayer(output_dim, residual=True, dropout=0.0) -> Callable:
+def GatedGCNLayer(output_dim, weight_on_edges=True, residual=True, dropout=0.0) -> Callable:
   """Returns a method that applies a GatedGCN layer.
 
   Args:
     output_dim: the dimension of output node and edge feature vectors
+    weight_on_edges: if True the soft attention for nodes is over on edge outputs, otherwise over the intermediate eta values
     residual: whether we have a residual connection, as the original gated GCN did (TODO: Verify). Requires output_dim=input_dim 
-
+    dropout=0.0: 
   Returns:
     A function that applies a GatedGCN layer.
   """
@@ -58,31 +59,25 @@ def GatedGCNLayer(output_dim, residual=True, dropout=0.0) -> Callable:
     print(f"GatedGCN total_num_nodes: {total_num_nodes}")
     hi = nodes[i]
     hj = nodes[j]
-    Ah = A(hi)
-    Bh = B(hj)
-    Ce = C(edges)
 
-    edge_layer_features = Ah + Bh + Ce
-    edge_layer_features = jax.nn.relu(batch_norm_edge(edge_layer_features, is_training))
+    eta = A(hi) + B(hj) + C(edges)
+    edge_layer_features = jax.nn.relu(batch_norm_edge(eta, is_training))
 
     if residual:
       edges = edges + edge_layer_features
     else:
       edges = edge_layer_features
 
+    if weight_on_edges:
+      w_sigma = jax.nn.sigmoid(edges)
+    else:
+      w_sigma = jax.nn.sigmoid(eta)
+                               
+    w_sigma_sum = jax.ops.segment_sum(w_sigma, segment_ids=i, num_segments=sum_n_node) + 1e-6
 
-    #GNN-LSPE does batch norm after softmaxing!
-    attn_softmax_logits = jax.nn.sigmoid(edges)
-    #Does this work for multiple dimensions? I think so
-    #The GNN-LSPE repo has an epsilon of 1e-6, what repo does 
-    attn_weights = jraph.segment_softmax(
-        attn_softmax_logits, segment_ids=i, num_segments=sum_n_node)
-
-    Uh = U(nodes)
-    Vh = V(hj)
-    messages = Vh * attn_weights #TODO: check this is Hadamard product?
-
-    node_layer_features = Uh + jax.ops.segment_sum(messages, i, num_segments=sum_n_node) # i or j?
+    unattnd_messages = V(hj) * w_sigma #TODO: check this is Hadamard product
+    agg_unattnd_messages = jax.ops.segment_sum(unattnd_messages, i, num_segments=sum_n_node) # i or j?
+    node_layer_features = U(nodes) + agg_unattnd_messages / w_sigma_sum
     node_layer_features = jax.nn.relu(batch_norm_node(node_layer_features, is_training))
 
     if residual:
