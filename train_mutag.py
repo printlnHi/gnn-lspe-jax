@@ -29,18 +29,22 @@ def compute_loss(params: hk.Params, graph: jraph.GraphsTuple, label: jnp.ndarray
       (jnp.argmax(pred_graph.globals, axis=1) == label) * mask) / jnp.sum(mask)
   return loss, accuracy
 
-  # Adapted from https://github.com/deepmind/jraph/blob/master/jraph/ogb_examples/train.py
+  # Adapted from
+  # https://github.com/deepmind/jraph/blob/master/jraph/ogb_examples/train.py
 
 # Assume ds already padded
-def train_epoch(params: hk.Params, opt_state: optax.OptState, opt_update: optax.TransformUpdateFn, ds: List[Dict[str, Any]], net: jraph.GraphsTuple) -> Tuple[hk.Params, optax.OptState, Dict[str, Any]]:
-    
+
+
+def train_epoch(params: hk.Params, opt_state: optax.OptState, opt_update: optax.TransformUpdateFn,
+                ds: List[Dict[str, Any]], net: jraph.GraphsTuple) -> Tuple[hk.Params, optax.OptState, Dict[str, Any]]:
+
   compute_loss_fn = functools.partial(compute_loss, net=net)
   # We jit the computation of our loss, since this is the main computation.
   # Using jax.jit means that we will use a single accelerator. If you want
   # to use more than 1 accelerator, use jax.pmap. More information can be
   # found in the jax documentation.
   compute_loss_fn = jax.jit(jax.value_and_grad(
-      compute_loss_fn, has_aux=True))    
+      compute_loss_fn, has_aux=True))
 
   losses = []
   accuracies = []
@@ -50,12 +54,16 @@ def train_epoch(params: hk.Params, opt_state: optax.OptState, opt_update: optax.
     params = optax.apply_updates(params, updates)
     losses.append(loss)
     accuracies.append(accuracy)
-  
-  metrics = {"loss": jnp.mean(jnp.asarray(losses)), "accuracy":jnp.mean(jnp.asarray(accuracies))}
+
+  metrics = {"loss": jnp.mean(jnp.asarray(losses)),
+             "accuracy": jnp.mean(jnp.asarray(accuracies))}
   return params, opt_state, metrics
 
 # Assumes ds already padded
-def evaluate_epoch(params: hk.Params, ds: List[Dict[str, Any]], net: jraph.GraphsTuple) -> Dict[str, Any]:
+
+
+def evaluate_epoch(
+  params: hk.Params, ds: List[Dict[str, Any]], net: jraph.GraphsTuple) -> Dict[str, Any]:
   compute_loss_fn = functools.partial(compute_loss, net=net)
   compute_loss_fn = jax.jit(compute_loss_fn)
 
@@ -65,13 +73,14 @@ def evaluate_epoch(params: hk.Params, ds: List[Dict[str, Any]], net: jraph.Graph
     loss, accuracy = compute_loss_fn(params, graph, label)
     losses.append(loss)
     accuracies.append(accuracy)
-  
-  metrics = {"loss": jnp.mean(jnp.asarray(losses)), "accuracy":jnp.mean(jnp.asarray(accuracies))}
+
+  metrics = {"loss": jnp.mean(jnp.asarray(losses)),
+             "accuracy": jnp.mean(jnp.asarray(accuracies))}
   return metrics
 
 
-def get_trainer_evaluator(net: jraph.GraphsTuple) -> Tuple[Callable[[hk.Params, optax.OptState, optax.TransformUpdateFn, List[Dict[str, Any]]],Tuple[hk.Params, optax.OptState, Dict[str, Any]]], Callable[[hk.Params, List[Dict[str, Any]]], Dict[str, Any]]]:
+def get_trainer_evaluator(net: jraph.GraphsTuple) -> Tuple[Callable[[hk.Params, optax.OptState, optax.TransformUpdateFn, List[Dict[str, Any]]],
+                                                                    Tuple[hk.Params, optax.OptState, Dict[str, Any]]], Callable[[hk.Params, List[Dict[str, Any]]], Dict[str, Any]]]:
   trainer = functools.partial(train_epoch, net=net)
   evaluator = functools.partial(evaluate_epoch, net=net)
   return trainer, evaluator
-

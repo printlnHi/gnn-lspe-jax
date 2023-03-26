@@ -4,16 +4,19 @@ import optax
 
 from typing import Any, List, Dict
 
-# Adapted from https://github.com/deepmind/jraph/blob/master/jraph/ogb_examples/train.py
+
 def _nearest_bigger_power_of_two(x: int) -> int:
-  """Computes the nearest power of two greater than x for padding."""
+  """Computes the nearest power of two greater than x for padding.
+  Adapted from https://github.com/deepmind/jraph/blob/master/jraph/ogb_examples/train.py
+  """
   y = 2
   while y < x:
     y *= 2
   return y
 
+
 def pad_graph_to_nearest_power_of_two(
-    graphs_tuple: jraph.GraphsTuple) -> jraph.GraphsTuple:
+        graphs_tuple: jraph.GraphsTuple) -> jraph.GraphsTuple:
   """Pads a batched `GraphsTuple` to the nearest power of two.
   For example, if a `GraphsTuple` has 7 nodes, 5 edges and 3 graphs, this method
   would pad the `GraphsTuple` nodes and edges:
@@ -27,6 +30,7 @@ def pad_graph_to_nearest_power_of_two(
     graphs_tuple: a batched `GraphsTuple` (can be batch size 1).
   Returns:
     A graphs_tuple batched to the nearest power of two.
+  Adapted from https://github.com/deepmind/jraph/blob/master/jraph/ogb_examples/train.py
   """
   # Add 1 since we need at least one padding node for pad_with_graphs.
   pad_nodes_to = _nearest_bigger_power_of_two(jnp.sum(graphs_tuple.n_node)) + 1
@@ -37,6 +41,7 @@ def pad_graph_to_nearest_power_of_two(
   return jraph.pad_with_graphs(graphs_tuple, pad_nodes_to, pad_edges_to,
                                pad_graphs_to)
 
+
 def pad_all(ds: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
   """Pads all graphs in a dataset to the nearest power of two."""
   # Jax will re-jit your graphnet every time a new graph shape is encountered.
@@ -44,19 +49,22 @@ def pad_all(ds: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
   # will result in *extremely* slow training. To prevent this, pad each
   # batch of graphs to the nearest power of two. Since jax maintains a cache
   # of compiled programs, the compilation cost is amortized.
-  
+
   padded = []
   for graph in ds:
     graph = dict(graph)
-    graph["input_graph"] = pad_graph_to_nearest_power_of_two(graph["input_graph"])
+    graph["input_graph"] = pad_graph_to_nearest_power_of_two(
+      graph["input_graph"])
     # Since padding is implemented with pad_with_graphs, an extra graph has
     # been added to the batch, which means there should be an extra label.
     graph["target"] = jnp.concatenate([graph["target"], jnp.array([0])])
     padded.append(graph)
   return padded
 
-def create_optimizer(hyper_params: Dict[str, Any]) -> optax.GradientTransformation:
-  
+
+def create_optimizer(
+  hyper_params: Dict[str, Any]) -> optax.GradientTransformation:
+
   # TODO: replace learning_rate with a scheduler that uses appropriate hyper parameters
   # TODO: understand what params "weight decay" is
   return optax.adam(learning_rate=hyper_params["init_lr"])

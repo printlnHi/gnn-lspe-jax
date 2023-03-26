@@ -22,6 +22,7 @@ train_ds = train_mutag_ds
 val_ds = test_mutag_ds
 test_ds = test_mutag_ds
 
+
 def compute_loss(params: hk.Params, graph: jraph.GraphsTuple, label: jnp.ndarray,
                  net: jraph.GraphsTuple) -> Tuple[jnp.ndarray, jnp.ndarray]:
   """Computes loss and accuracy."""
@@ -43,9 +44,12 @@ def compute_loss(params: hk.Params, graph: jraph.GraphsTuple, label: jnp.ndarray
       (jnp.argmax(pred_graph.globals, axis=1) == label) * mask) / jnp.sum(mask)
   return loss, accuracy
 
-  # Adapted from https://github.com/deepmind/jraph/blob/master/jraph/ogb_examples/train.py
+  # Adapted from
+  # https://github.com/deepmind/jraph/blob/master/jraph/ogb_examples/train.py
 
-def train(train_ds: List[Dict[str, Any]], val_ds: Optional[List[Dict[str, Any]]], num_train_steps: int, net_fn: Callable[[jraph.GraphsTuple], jraph.GraphsTuple]) -> hk.Params:
+
+def train(train_ds: List[Dict[str, Any]], val_ds: Optional[List[Dict[str, Any]]],
+          num_train_steps: int, net_fn: Callable[[jraph.GraphsTuple], jraph.GraphsTuple]) -> hk.Params:
   """Training loop."""
 
   # Transform impure `net_fn` to pure functions with hk.transform.
@@ -67,7 +71,6 @@ def train(train_ds: List[Dict[str, Any]], val_ds: Optional[List[Dict[str, Any]]]
   compute_loss_fn = jax.jit(jax.value_and_grad(
       compute_loss_fn, has_aux=True))
 
-
   padded_train_ds = pad_all(train_ds)
   print(f'Training dataset size: {len(padded_train_ds)}')
 
@@ -78,7 +81,7 @@ def train(train_ds: List[Dict[str, Any]], val_ds: Optional[List[Dict[str, Any]]]
   else:
     padded_val_ds = None
     print('No validation dataset provided')
-  
+
   for idx in range(num_train_steps):
     graph = padded_train_ds[idx % len(train_ds)]['input_graph']
     label = padded_train_ds[idx % len(train_ds)]['target']
@@ -91,8 +94,10 @@ def train(train_ds: List[Dict[str, Any]], val_ds: Optional[List[Dict[str, Any]]]
       print(f'idx: {idx}, loss: {loss}, acc: {acc}')
   print('Training finished')
   return params
-  
-def train_batched(train_ds: List[Dict[str, Any]], val_ds: Optional[List[Dict[str, Any]]], num_epochs: int, net_fn: Callable[[jraph.GraphsTuple], jraph.GraphsTuple], batch_size: int = 32) -> hk.Params:
+
+
+def train_batched(train_ds: List[Dict[str, Any]], val_ds: Optional[List[Dict[str, Any]]], num_epochs: int, net_fn: Callable[[
+                  jraph.GraphsTuple], jraph.GraphsTuple], batch_size: int = 32) -> hk.Params:
   """Training loop."""
 
   # Transform impure `net_fn` to pure functions with hk.transform.
@@ -113,9 +118,8 @@ def train_batched(train_ds: List[Dict[str, Any]], val_ds: Optional[List[Dict[str
   # found in the jax documentation.
   compute_loss_fn_jit = jax.jit(jax.value_and_grad(
       compute_loss_fn, has_aux=True))
-  #pmap compute_loss_fn instead across graph and label
+  # pmap compute_loss_fn instead across graph and label
   compute_loss_fn = jax.pmap(compute_loss_fn_jit, in_axes=(None, 0, 0))
-
 
   print('Unpadded training dataset size: ', len(train_ds))
   padded_train_ds = pad_all(train_ds)
@@ -128,22 +132,21 @@ def train_batched(train_ds: List[Dict[str, Any]], val_ds: Optional[List[Dict[str
   else:
     padded_val_ds = None
     print('No validation dataset provided')
-  
-  print_every = (num_epochs+20-1)//20
+
+  print_every = (num_epochs + 20 - 1) // 20
   for epoch in range(num_epochs):
     for idx in range(0, len(padded_train_ds), batch_size):
-      graphs = [padded_train_ds[i % len(train_ds)]['input_graph'] for i in range(idx, idx + batch_size)]
-      labels = [padded_train_ds[i % len(train_ds)]['target'] for i in range(idx, idx + batch_size)]
+      graphs = [padded_train_ds[i % len(train_ds)]['input_graph']
+                for i in range(idx, idx + batch_size)]
+      labels = [padded_train_ds[i % len(train_ds)]['target']
+                for i in range(idx, idx + batch_size)]
 
       (loss, acc), grad = compute_loss_fn(params, graphs, labels)
       updates, opt_state = opt_update(grad, opt_state, params)
       params = optax.apply_updates(params, updates)
       wandb.log({'loss': loss, 'acc': acc, 'idx': idx})
-      if epoch % print_every == 0 or epoch == num_epochs-1:
+      if epoch % print_every == 0 or epoch == num_epochs - 1:
         print(f'epoch: {epoch}, idx: {idx}, loss: {loss}, acc: {acc}')
-
-
-
 
 
 def evaluate(dataset: List[Dict[str, Any]],
@@ -173,15 +176,19 @@ def evaluate(dataset: List[Dict[str, Any]],
   print(f'Eval loss: {loss}, accuracy {accuracy}')
   return loss, accuracy
 
+
 wandb.init(project="Part II", entity="marcushandley", name="test")
 
 try:
-  params = train_batched(train_mutag_ds, test_mutag_ds, num_epochs=5, net_fn=networks.net_fn)
+  params = train_batched(
+      train_mutag_ds,
+      test_mutag_ds,
+      num_epochs=5,
+      net_fn=networks.net_fn)
   evaluate(test_mutag_ds, params, net_fn=networks.net_fn)
-  #finish wandb normally
+  # finish wandb normally
   wandb.finish()
 except Exception as e:
-  #finish wandb noting error then reraise exception
+  # finish wandb noting error then reraise exception
   wandb.finish(exit_code=1)
   raise e
-  
