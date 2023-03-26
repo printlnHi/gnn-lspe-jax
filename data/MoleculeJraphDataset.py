@@ -1,13 +1,11 @@
 from typing import Any, Tuple, List
 
-from jraph import GraphsTuple
-
-DatasetSplit = List[Tuple[GraphsTuple, Any]]
+from type_aliases import LabelledGraphs
 
 
 class MoleculeJraphDataset:
-  def __init__(self, train: DatasetSplit, test: DatasetSplit,
-               val: DatasetSplit, num_atom_type: int, num_bond_type: int):
+  def __init__(self, train: LabelledGraphs, test: LabelledGraphs,
+               val: LabelledGraphs, num_atom_type: int, num_bond_type: int):
     self.train = train
     self.test = test
     self.val = val

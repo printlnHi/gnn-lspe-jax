@@ -12,11 +12,13 @@ import optax
 import datasets
 import wandb
 from nets.zinc import gnn_model
+from train_zinc import get_trainer_evaluator
 from utils import create_optimizer
 
 if __name__ == "__main__":
   print("jax backend:", jax.lib.xla_bridge.get_backend().platform)
   print("jax devices:", jax.devices())
+  print()
 
   parser = argparse.ArgumentParser()
 
@@ -41,11 +43,15 @@ if __name__ == "__main__":
   if args.epochs:
     hyper_params["epochs"] = args.epochs
 
+  rng = jax.random.PRNGKey(hyper_params["seed"])
+
   # network parameters
   net_params = config["net_params"]
 
   dataset = datasets.zinc()
   train, val, test = dataset.train, dataset.val, dataset.test
+  # TODO: pad dataset
+  train_trunc = train[:1]
 
   net_params["num_atom_type"] = dataset.num_atom_type
   net_params["num_bond_type"] = dataset.num_bond_type
@@ -55,14 +61,34 @@ if __name__ == "__main__":
         project=args.wandb_project,
         entity=args.wandb_entity,
         name=args.wandb_run_name)
+
   try:
     net_fn = gnn_model(net_params=net_params)
     net = hk.transform_with_state(net_fn)
-    params, state = net.init(
-        jax.random.PRNGKey(
-            hyper_params["seed"]), train[0][0], is_training=True)
 
-    # params = train_val_pipeline(dataset, hyper_params, {}, {}, wandb_enabled=args.wandb)
+    rng, subkey = jax.random.split(rng)
+    params, state = net.init(subkey, train[0][0], is_training=True)
+    del subkey
+    opt_init, opt_update = create_optimizer(hyper_params)
+    opt_state = opt_init(params)
+    train_epoch, evaluate_epoch = get_trainer_evaluator(net)
+
+    for epoch in range(hyper_params["epochs"]):
+      # Train for one epoch.
+      rng, subkey = jax.random.split(rng)
+      params, state, opt_state, train_metrics = train_epoch(
+          params, state, subkey, opt_state, opt_update, train_trunc)
+      print(
+          f'Epoch {epoch} - train loss: {train_metrics["loss"]}')
+
+      # Evaluate on the validation set.
+      val_metrics = evaluate_epoch(params, state, train_trunc)
+      print(
+          f'Epoch {epoch} - val loss: {val_metrics["loss"]}')
+
+      if args.wandb:
+        wandb.log({'epoch': epoch} | train_metrics | val_metrics)
+
     # finish wandb normally
     wandb.finish()
   except Exception as e:
