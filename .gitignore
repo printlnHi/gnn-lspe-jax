@@ -1,4 +1,5 @@
 wandb/
+.vscode/
 **/*.pyc
 **/*.pkl
 **/*.pickle
