@@ -1,11 +1,14 @@
+import functools
+from typing import Any, Dict, List, Tuple
+
+import haiku as hk
 import jax
 import jax.numpy as jnp
 import jraph
-import haiku as hk
 import optax
-import functools
 
-from typing import Tuple, List, Dict, Any, Callable
+from type_aliases import (EvaluateStatelessFn, Metrics, TrainStatelessFn,
+                          TrainStatelessResult)
 
 
 def compute_loss(params: hk.Params, graph: jraph.GraphsTuple, label: jnp.ndarray,
@@ -36,7 +39,7 @@ def compute_loss(params: hk.Params, graph: jraph.GraphsTuple, label: jnp.ndarray
 
 
 def train_epoch(params: hk.Params, opt_state: optax.OptState, opt_update: optax.TransformUpdateFn,
-                ds: List[Dict[str, Any]], net: jraph.GraphsTuple) -> Tuple[hk.Params, optax.OptState, Dict[str, Any]]:
+                ds: List[Dict[str, Any]], net: jraph.GraphsTuple) -> TrainStatelessResult:
 
   compute_loss_fn = functools.partial(compute_loss, net=net)
   # We jit the computation of our loss, since this is the main computation.
@@ -63,7 +66,7 @@ def train_epoch(params: hk.Params, opt_state: optax.OptState, opt_update: optax.
 
 
 def evaluate_epoch(
-  params: hk.Params, ds: List[Dict[str, Any]], net: jraph.GraphsTuple) -> Dict[str, Any]:
+  params: hk.Params, ds: List[Dict[str, Any]], net: jraph.GraphsTuple) -> Metrics:
   compute_loss_fn = functools.partial(compute_loss, net=net)
   compute_loss_fn = jax.jit(compute_loss_fn)
 
@@ -79,8 +82,8 @@ def evaluate_epoch(
   return metrics
 
 
-def get_trainer_evaluator(net: jraph.GraphsTuple) -> Tuple[Callable[[hk.Params, optax.OptState, optax.TransformUpdateFn, List[Dict[str, Any]]],
-                                                                    Tuple[hk.Params, optax.OptState, Dict[str, Any]]], Callable[[hk.Params, List[Dict[str, Any]]], Dict[str, Any]]]:
+def get_trainer_evaluator(
+  net: jraph.GraphsTuple) -> Tuple[TrainStatelessFn, EvaluateStatelessFn]:
   trainer = functools.partial(train_epoch, net=net)
   evaluator = functools.partial(evaluate_epoch, net=net)
   return trainer, evaluator

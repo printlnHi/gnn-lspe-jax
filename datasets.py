@@ -12,6 +12,6 @@ def mutag():
 
 
 def zinc():
-  with open('data/ZINC.pkl', 'rb') as f:
+  with open('data/zinc_jraph.pickle', 'rb') as f:
     ds = pickle.load(f)
   return ds

@@ -40,6 +40,8 @@ def GatedGCNLayer(output_dim, weight_on_edges=True,
     # TODO: Check if batch norm parameters are the same as those of pytorch
 
     nodes, edges, receivers, senders, _, _, _ = graph
+    h = nodes['feat']
+    e = edges['feat']
     # Does this sender<-> i receiver<->j correspondence make sense? Do we only
     # care about undirected graph
     i = senders
@@ -47,60 +49,61 @@ def GatedGCNLayer(output_dim, weight_on_edges=True,
 
     # Equivalent to the sum of n_node, but statically known.
     try:
-      sum_n_node = nodes.shape[0]
+      sum_n_node = h.shape[0]
     except IndexError:
       raise IndexError('GatedGCN requires node features')
     assert(edges is not None)
 
-    if residual and nodes.shape[1] != output_dim:
+    if residual and h.shape[1] != output_dim:
       raise ValueError(f"For residual connections the output_dim ({output_dim}) must match"
-                       f"the node feature dimension {nodes.shape[1]}")
-    if residual and edges.shape[1] != output_dim:
+                       f"the node feature dimension {h.shape[1]}")
+    if residual and e.shape[1] != output_dim:
       raise ValueError(f"For residual connections the output_dim ({output_dim}) must match"
-                       f"the edge feature dimension {edges.shape[1]}")
+                       f"the edge feature dimension {e.shape[1]}")
 
     assert(
         not residual or (
-            nodes.shape[1] == output_dim and edges.shape[1] == output_dim))
+            h.shape[1] == output_dim and e.shape[1] == output_dim))
 
     # Pass nodes through the attention query function to transform
     # node features, e.g. with an MLP.
-    total_num_nodes = tree.tree_leaves(nodes)[0].shape[0]
-    print(f"GatedGCN total_num_nodes: {total_num_nodes}")
-    hi = nodes[i]
-    hj = nodes[j]
+    total_num_nodes = tree.tree_leaves(h)[0].shape[0]
 
-    eta = A(hi) + B(hj) + C(edges)
+    eta = A(h[i]) + B(h[j]) + C(e)
     edge_layer_features = jax.nn.relu(batch_norm_edge(eta, is_training))
 
     if residual:
-      edges = edges + edge_layer_features
+      e = e + edge_layer_features
     else:
-      edges = edge_layer_features
+      e = edge_layer_features
 
     if weight_on_edges:
-      w_sigma = jax.nn.sigmoid(edges)
+      w_sigma = jax.nn.sigmoid(e)
     else:
       w_sigma = jax.nn.sigmoid(eta)
 
     w_sigma_sum = jax.ops.segment_sum(
         w_sigma, segment_ids=i, num_segments=sum_n_node) + 1e-6
 
-    unattnd_messages = V(hj) * w_sigma  # TODO: check this is Hadamard product
+    # TODO: check this is Hadamard product
+    unattnd_messages = V(h[j]) * w_sigma
     agg_unattnd_messages = jax.ops.segment_sum(
         unattnd_messages, i, num_segments=sum_n_node)  # i or j?
-    node_layer_features = U(nodes) + agg_unattnd_messages / w_sigma_sum
+    node_layer_features = U(h) + agg_unattnd_messages / w_sigma_sum
     node_layer_features = jax.nn.relu(
       batch_norm_node(node_layer_features, is_training))
 
     if residual:
-      nodes = nodes + node_layer_features
+      h = h + node_layer_features
     else:
-      nodes = node_layer_features
+      h = node_layer_features
 
     if is_training:
-      nodes = hk.dropout(hk.next_rng_key(), dropout, nodes)
-      edges = hk.dropout(hk.next_rng_key(), dropout, edges)
+      h = hk.dropout(hk.next_rng_key(), dropout, h)
+      e = hk.dropout(hk.next_rng_key(), dropout, e)
+
+    nodes = dict(nodes | {'feat': h})
+    edges = dict(edges | {'feat': e})
     return graph._replace(nodes=nodes, edges=edges)
 
   return _ApplyGatedGCN
