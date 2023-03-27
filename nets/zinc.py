@@ -38,7 +38,8 @@ def gnn_model(net_params: Dict[str, Any]) -> GraphClassifierFn:
     nodes, edges, receivers, senders, globals, n_node, n_edge = graph
 
     h = hk.Embed(vocab_size=num_atom_type, embed_dim=hidden_dim)(nodes['feat'])
-    h = hk.dropout(hk.next_rng_key(), in_feat_dropout, h)
+    if is_training:
+      h = hk.dropout(hk.next_rng_key(), in_feat_dropout, h)
 
     if pe_init in ['rand_walk', 'lap_pe']:
       hk.Linear(hidden_dim)  # embedding_p to be applied
@@ -68,11 +69,10 @@ def gnn_model(net_params: Dict[str, Any]) -> GraphClassifierFn:
               dropout=dropout) for _ in range(
               n_layers - 1)]
       layers.append(GatedGCNLayer(out_dim, residual=residual, dropout=dropout))
-      layers = hk.Sequential(layers)
 
     # TODO: Will have to update this to propogate p features
-    nodes.update({'feat': h})
-    edges.update({'feat': e})
+    nodes = nodes | {'feat': h}
+    edges = edges | {'feat': e}
     updated_graph = jraph.GraphsTuple(
         nodes=nodes,
         edges=edges,
@@ -81,7 +81,8 @@ def gnn_model(net_params: Dict[str, Any]) -> GraphClassifierFn:
         n_node=n_node,
         n_edge=n_edge,
         globals=globals)
-    updated_graph = layers(updated_graph, is_training=is_training)
+    for layer in layers:
+      updated_graph = layer(updated_graph, is_training=is_training)
     nodes, edges, _, _, _, _, _ = updated_graph
 
     if pe_init == 'rand_walk':

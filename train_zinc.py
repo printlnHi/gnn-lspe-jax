@@ -15,7 +15,7 @@ def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.Stat
                  datapoint: LabelledGraph, rng: jax.random.KeyArray, is_training: bool) -> Tuple[jnp.ndarray, hk.State]:
   """Compute the loss for a given dataset."""
   graph, label = datapoint
-  scores = net.apply(params, state, rng, graph, is_training=is_training)
+  scores, state = net.apply(params, state, rng, graph, is_training=is_training)
   # L1 loss
   loss = jnp.mean(jnp.abs(scores - label))
   return loss, state

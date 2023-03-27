@@ -25,7 +25,7 @@ if __name__ == "__main__":
   parser.add_argument("--wandb", action="store_true")
   parser.add_argument("--wandb_entity", type=str, default="marcushandley")
   parser.add_argument("--wandb_project", type=str, default="Part II")
-  parser.add_argument("--wandb_run_name", type=str, default="test_main_mutag")
+  parser.add_argument("--wandb_run_name", type=str, default="proto_zinc")
 
   parser.add_argument(
       '--config',
@@ -87,7 +87,9 @@ if __name__ == "__main__":
           f'Epoch {epoch} - val loss: {val_metrics["loss"]}')
 
       if args.wandb:
-        wandb.log({'epoch': epoch} | train_metrics | val_metrics)
+        wandb.log({'epoch': epoch} | {'train ' + k: v for k,
+                                      v in train_metrics.items()} | {'val ' + k: v for k,
+                                                                     v in val_metrics.items()})
 
     # finish wandb normally
     wandb.finish()

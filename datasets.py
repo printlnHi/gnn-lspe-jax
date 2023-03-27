@@ -1,5 +1,6 @@
 import pickle
 from utils import pad_all
+from data.MoleculeJraphDataset import MoleculeJraphDataset
 
 
 def mutag():
@@ -11,7 +12,7 @@ def mutag():
   return (ds[:150], ds[150:-10], ds[-10:])
 
 
-def zinc():
+def zinc() -> MoleculeJraphDataset:
   with open('data/zinc_jraph.pickle', 'rb') as f:
     ds = pickle.load(f)
   return ds
