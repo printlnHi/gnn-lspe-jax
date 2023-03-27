@@ -13,7 +13,7 @@ import optax
 import datasets
 import wandb
 from nets.zinc import gnn_model
-from train_zinc import get_trainer_evaluator
+from train_zinc import train_epoch, evaluate_epoch, compute_loss
 from utils import create_optimizer
 
 if __name__ == "__main__":
@@ -27,6 +27,7 @@ if __name__ == "__main__":
   parser.add_argument("--wandb_entity", type=str, default="marcushandley")
   parser.add_argument("--wandb_project", type=str, default="Part II")
   parser.add_argument("--wandb_run_name", type=str, default="proto_zinc")
+  parser.add_argument("--no_jit", action="store_true")
 
   parser.add_argument(
       '--config',
@@ -72,7 +73,15 @@ if __name__ == "__main__":
     del subkey
     opt_init, opt_update = create_optimizer(hyper_params)
     opt_state = opt_init(params)
-    train_epoch, evaluate_epoch = get_trainer_evaluator(net)
+
+    train_loss_and_grad_fn = jax.value_and_grad(
+      functools.partial(compute_loss, net, is_training=True), has_aux=True)
+    # Rng only used for dropout, not needed for eval
+    eval_loss_fn = functools.partial(
+        compute_loss, net, rng=None, is_training=False)
+    if not args.no_jit:
+      train_loss_and_grad_fn = jax.jit(train_loss_and_grad_fn)
+      eval_loss_fn = jax.jit(eval_loss_fn)
 
     start_time = time.time()
 
@@ -80,12 +89,12 @@ if __name__ == "__main__":
       # Train for one epoch.
       rng, subkey = jax.random.split(rng)
       params, state, opt_state, train_metrics = train_epoch(
-          params, state, subkey, opt_state, opt_update, train_trunc)
+          train_loss_and_grad_fn, params, state, subkey, opt_state, opt_update, train_trunc)
       print(
           f'Epoch {epoch} - train loss: {train_metrics["loss"]}')
 
       # Evaluate on the validation set.
-      val_metrics = evaluate_epoch(params, state, train_trunc)
+      val_metrics = evaluate_epoch(eval_loss_fn, params, state, train_trunc)
       print(
           f'Epoch {epoch} - val loss: {val_metrics["loss"]}')
 
