@@ -1,6 +1,7 @@
 import argparse
 import functools
 import json
+import time
 from typing import Any, Dict, List, Tuple
 
 import haiku as hk
@@ -73,6 +74,8 @@ if __name__ == "__main__":
     opt_state = opt_init(params)
     train_epoch, evaluate_epoch = get_trainer_evaluator(net)
 
+    start_time = time.time()
+
     for epoch in range(hyper_params["epochs"]):
       # Train for one epoch.
       rng, subkey = jax.random.split(rng)
@@ -87,9 +90,11 @@ if __name__ == "__main__":
           f'Epoch {epoch} - val loss: {val_metrics["loss"]}')
 
       if args.wandb:
-        wandb.log({'epoch': epoch} | {'train ' + k: v for k,
-                                      v in train_metrics.items()} | {'val ' + k: v for k,
-                                                                     v in val_metrics.items()})
+        time_elapsed = time.time() - start_time
+        wandb.log({'epoch': epoch,
+                   'time': time_elapsed} | {'train ' + k: v for k,
+                                            v in train_metrics.items()} | {'val ' + k: v for k,
+                                                                           v in val_metrics.items()})
 
     # finish wandb normally
     wandb.finish()
