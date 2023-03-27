@@ -28,6 +28,7 @@ if __name__ == "__main__":
   parser.add_argument("--wandb_project", type=str, default="Part II")
   parser.add_argument("--wandb_run_name", type=str, default="proto_zinc")
   parser.add_argument("--no_jit", action="store_true")
+  parser.add_argument("--no_update_jit", action="store_true")
 
   parser.add_argument(
       '--config',
@@ -65,6 +66,8 @@ if __name__ == "__main__":
         name=args.wandb_run_name)
 
   try:
+    start_time = time.time()
+
     net_fn = gnn_model(net_params=net_params)
     net = hk.transform_with_state(net_fn)
 
@@ -74,16 +77,18 @@ if __name__ == "__main__":
     opt_init, opt_update = create_optimizer(hyper_params)
     opt_state = opt_init(params)
 
+    if not args.no_update_jit:
+      opt_update = jax.jit(opt_update)
+
     train_loss_and_grad_fn = jax.value_and_grad(
       functools.partial(compute_loss, net, is_training=True), has_aux=True)
     # Rng only used for dropout, not needed for eval
     eval_loss_fn = functools.partial(
         compute_loss, net, rng=None, is_training=False)
+
     if not args.no_jit:
       train_loss_and_grad_fn = jax.jit(train_loss_and_grad_fn)
       eval_loss_fn = jax.jit(eval_loss_fn)
-
-    start_time = time.time()
 
     for epoch in range(hyper_params["epochs"]):
       # Train for one epoch.
