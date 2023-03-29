@@ -27,6 +27,7 @@ if __name__ == "__main__":
   parser.add_argument("--wandb_entity", type=str, default="marcushandley")
   parser.add_argument("--wandb_project", type=str, default="Part II")
   parser.add_argument("--wandb_run_name", type=str, default="proto_zinc")
+  parser.add_argument("--print_every", type=int, default=100)
 
   parser.add_argument("--no_jit", action="store_true")
   parser.add_argument("--no_update_jit", action="store_true")
@@ -38,6 +39,7 @@ if __name__ == "__main__":
       help="Please give a config.json file with training/model/data/param details")
 
   parser.add_argument("--epochs", type=int)
+  parser.add_argument("--seed", type=int)
 
   args = parser.parse_args()
 
@@ -48,6 +50,8 @@ if __name__ == "__main__":
   hyper_params = config["params"]
   if args.epochs:
     hyper_params["epochs"] = args.epochs
+  if args.seed:
+    hyper_params["seed"] = args.seed
 
   rng = jax.random.PRNGKey(hyper_params["seed"])
 
@@ -105,17 +109,21 @@ if __name__ == "__main__":
 
     print("Training...")
     for epoch in range(hyper_params["epochs"]):
+      print_epoch_metrics = epoch % args.print_every == 0 or epoch == hyper_params[
+        "epochs"] - 1
       # Train for one epoch.
       rng, subkey = jax.random.split(rng)
       params, state, opt_state, train_metrics = train_epoch(
           train_loss_and_grad_fn, params, state, subkey, opt_state, opt_update, train)
-      print(
-          f'Epoch {epoch} - train loss: {train_metrics["loss"]}')
+      if print_epoch_metrics:
+        print(
+            f'Epoch {epoch} - train loss: {train_metrics["loss"]}')
 
       # Evaluate on the validation set.
       val_metrics = evaluate_epoch(eval_loss_fn, params, state, val)
-      print(
-          f'Epoch {epoch} - val loss: {val_metrics["loss"]}')
+      if print_epoch_metrics:
+        print(
+            f'Epoch {epoch} - val loss: {val_metrics["loss"]}')
 
       if args.wandb:
         time_elapsed = time.time() - start_time
