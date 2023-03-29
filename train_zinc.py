@@ -19,7 +19,7 @@ def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.Stat
   mask = jraph.get_graph_padding_mask(graph)
   # L1 loss
   loss = jnp.sum(jnp.abs(scores - label) * mask) / jnp.sum(mask)
-  return loss, state,
+  return loss, state
 
 
 def train_epoch(loss_and_grad_fn, params: hk.Params, state: hk.State, rng: jax.random.KeyArray,

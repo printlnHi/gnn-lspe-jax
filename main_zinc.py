@@ -60,6 +60,9 @@ if __name__ == "__main__":
     train = pad_all(train)
     val = pad_all(val)
     test = pad_all(test)
+  else:
+    raise NotImplementedError(
+      "Compute_loss currently required padded GraphsTuple ")
 
   # TODO: pad dataset
   if args.truncate_to:
