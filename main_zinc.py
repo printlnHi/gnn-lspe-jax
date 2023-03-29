@@ -14,7 +14,7 @@ import datasets
 import wandb
 from nets.zinc import gnn_model
 from train_zinc import train_epoch, evaluate_epoch, compute_loss
-from utils import create_optimizer
+from utils import create_optimizer, pad_all
 
 if __name__ == "__main__":
   print("jax backend:", jax.lib.xla_bridge.get_backend().platform)
@@ -27,8 +27,11 @@ if __name__ == "__main__":
   parser.add_argument("--wandb_entity", type=str, default="marcushandley")
   parser.add_argument("--wandb_project", type=str, default="Part II")
   parser.add_argument("--wandb_run_name", type=str, default="proto_zinc")
+
   parser.add_argument("--no_jit", action="store_true")
   parser.add_argument("--no_update_jit", action="store_true")
+  parser.add_argument("--truncate_to", type=int, default=None)
+  parser.add_argument("--no_pad", action="store_true")
 
   parser.add_argument(
       '--config',
@@ -53,8 +56,15 @@ if __name__ == "__main__":
 
   dataset = datasets.zinc()
   train, val, test = dataset.train, dataset.val, dataset.test
+  if not args.no_pad:
+    train = pad_all(train)
+    val = pad_all(val)
+    test = pad_all(test)
+
   # TODO: pad dataset
-  train_trunc = train[:1]
+  if args.truncate_to:
+    train = train[:args.truncate_to]
+    val = val[:args.truncate_to]
 
   net_params["num_atom_type"] = dataset.num_atom_type
   net_params["num_bond_type"] = dataset.num_bond_type
@@ -90,16 +100,17 @@ if __name__ == "__main__":
       train_loss_and_grad_fn = jax.jit(train_loss_and_grad_fn)
       eval_loss_fn = jax.jit(eval_loss_fn)
 
+    print("Training...")
     for epoch in range(hyper_params["epochs"]):
       # Train for one epoch.
       rng, subkey = jax.random.split(rng)
       params, state, opt_state, train_metrics = train_epoch(
-          train_loss_and_grad_fn, params, state, subkey, opt_state, opt_update, train_trunc)
+          train_loss_and_grad_fn, params, state, subkey, opt_state, opt_update, train)
       print(
           f'Epoch {epoch} - train loss: {train_metrics["loss"]}')
 
       # Evaluate on the validation set.
-      val_metrics = evaluate_epoch(eval_loss_fn, params, state, train_trunc)
+      val_metrics = evaluate_epoch(eval_loss_fn, params, state, val)
       print(
           f'Epoch {epoch} - val loss: {val_metrics["loss"]}')
 

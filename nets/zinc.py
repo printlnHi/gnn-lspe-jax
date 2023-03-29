@@ -36,6 +36,8 @@ def gnn_model(net_params: Dict[str, Any]) -> GraphClassifierFn:
                     is_training: bool) -> jnp.ndarray:
     """A gatedGCN model."""
     nodes, edges, receivers, senders, globals, n_node, n_edge = graph
+    sum_n_node = nodes['feat'].shape[0]
+    num_graphs = n_node.shape[0]
 
     h = hk.Embed(vocab_size=num_atom_type, embed_dim=hidden_dim)(nodes['feat'])
     if is_training:
@@ -84,6 +86,7 @@ def gnn_model(net_params: Dict[str, Any]) -> GraphClassifierFn:
     for layer in layers:
       updated_graph = layer(updated_graph, is_training=is_training)
     nodes, edges, _, _, _, _, _ = updated_graph
+    h = nodes['feat']
 
     if pe_init == 'rand_walk':
       p_out = hk.Linear(pos_enc_dim)
@@ -94,16 +97,22 @@ def gnn_model(net_params: Dict[str, Any]) -> GraphClassifierFn:
       raise NotImplementedError("Don't have a concept of node features p yet")
 
     # readout
-    node_features = jnp.stack(
-        jnp.split(
-            nodes['feat'],
-            jnp.cumsum(n_node)[
-                :-1]),
-        axis=0)
-    reduction = {'sum': jnp.sum, 'max': jnp.max, 'mean': jnp.mean}.get(
-      readout, jnp.mean)  # default readout is mean
-    hg = reduction(node_features, axis=0)
+    graph_indicies = jnp.repeat(
+        jnp.arange(
+            n_node.shape[0]),
+        n_node,
+        total_repeat_length=sum_n_node)
+    if readout == 'sum':
+      hg = jax.ops.segment_sum(h, graph_indicies, num_segments=num_graphs)
+    elif readout == 'max':
+      hg = jax.ops.segment_max(h, graph_indicies, num_segments=num_graphs)
+    else:
+      # mean
+      hg = jax.ops.segment_sum(h, graph_indicies, num_segments=num_graphs)
+      hg /= jnp.expand_dims(n_node, axis=1).astype(jnp.float32)
 
+    print(hg.shape)
+    print(hg)
     return mlp_readout(hg, input_dim=out_dim, output_dim=1)
 
   return gated_gcn_net

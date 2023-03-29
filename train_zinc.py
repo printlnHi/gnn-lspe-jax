@@ -15,8 +15,13 @@ def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.Stat
   """Compute the loss for a given dataset."""
   graph, label = datapoint
   scores, state = net.apply(params, state, rng, graph, is_training=is_training)
+
+  '''
+  mask = jraph.get_graph_padding_mask(graph)
   # L1 loss
-  loss = jnp.mean(jnp.abs(scores - label))
+  loss = jnp.sum(jnp.abs(scores - label) * mask) / jnp.sum(mask)
+  '''
+  loss = jnp.sum(jnp.abs(scores - label))
   return loss, state
 
 
