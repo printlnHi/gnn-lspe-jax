@@ -111,8 +111,6 @@ def gnn_model(net_params: Dict[str, Any]) -> GraphClassifierFn:
       hg = jax.ops.segment_sum(h, graph_indicies, num_segments=num_graphs)
       hg /= jnp.expand_dims(n_node, axis=1).astype(jnp.float32)
 
-    print(hg.shape)
-    print(hg)
     return mlp_readout(hg, input_dim=out_dim, output_dim=1)
 
   return gated_gcn_net
