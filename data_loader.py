@@ -1,7 +1,8 @@
 import jax
 import jax.numpy as jnp
 import numpy as np
-from typing import Optional
+from typing import Optional, Collection
+from type_aliases import LabelledGraph
 
 
 class DataLoaderIterator:
@@ -10,7 +11,7 @@ class DataLoaderIterator:
     self.batch_indicies = batch_indicies
     self.batch_index = 0
 
-  def __next__(self):
+  def __next__(self) -> Collection[LabelledGraph]:
     if self.batch_index >= len(self.batch_indicies):
       raise StopIteration
     batch = [self.dataset[index]
@@ -32,7 +33,7 @@ class DataLoader:
     self.batch_size = batch_size
     self.rng = rng
 
-  def __iter__(self):
+  def __iter__(self) -> DataLoaderIterator:
     n = len(self.dataset)
     if self.rng is not None:
       self.rng, subkey = jax.random.split(self.rng)

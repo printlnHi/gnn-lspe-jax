@@ -15,8 +15,7 @@ import datasets
 import wandb
 from nets.zinc import gnn_model
 from train_zinc import train_epoch, evaluate_epoch, compute_loss
-from utils import create_optimizer, pad_all
-from data_loader import DataLoader
+from utils import create_optimizer, pad_all, DataLoader
 
 if __name__ == "__main__":
   print("jax backend:", jax.lib.xla_bridge.get_backend().platform)
