@@ -9,12 +9,14 @@ import jax
 import jax.numpy as jnp
 import jraph
 import optax
+import numpy as np
 
 import datasets
 import wandb
 from nets.zinc import gnn_model
 from train_zinc import train_epoch, evaluate_epoch, compute_loss
 from utils import create_optimizer, pad_all
+from data_loader import DataLoader
 
 if __name__ == "__main__":
   print("jax backend:", jax.lib.xla_bridge.get_backend().platform)
@@ -68,10 +70,21 @@ if __name__ == "__main__":
     raise NotImplementedError(
       "Compute_loss currently required padded GraphsTuple ")
 
-  # TODO: pad dataset
   if args.truncate_to:
     train = train[:args.truncate_to]
     val = val[:args.truncate_to]
+
+  rng, subkey = jax.random.split(rng)
+  trainloader = DataLoader(
+      np.asarray(train, dtype=object),
+      hyper_params["batch_size"],
+      rng=subkey)
+  valloader = DataLoader(
+      np.asarray(
+          val,
+          dtype=object),
+      hyper_params["batch_size"],
+      rng=None)
 
   net_params["num_atom_type"] = dataset.num_atom_type
   net_params["num_bond_type"] = dataset.num_bond_type
