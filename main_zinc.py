@@ -41,6 +41,7 @@ if __name__ == "__main__":
 
   parser.add_argument("--epochs", type=int)
   parser.add_argument("--seed", type=int)
+  parser.add_argument("--batch_size", type=int)
 
   args = parser.parse_args()
 
@@ -53,6 +54,8 @@ if __name__ == "__main__":
     hyper_params["epochs"] = args.epochs
   if args.seed:
     hyper_params["seed"] = args.seed
+  if args.batch_size:
+    hyper_params["batch_size"] = args.batch_size
 
   rng = jax.random.PRNGKey(hyper_params["seed"])
 
@@ -61,11 +64,7 @@ if __name__ == "__main__":
 
   dataset = datasets.zinc()
   train, val, test = dataset.train, dataset.val, dataset.test
-  if not args.no_pad:
-    train = pad_all(train)
-    val = pad_all(val)
-    test = pad_all(test)
-  else:
+  if args.no_pad:
     raise NotImplementedError(
       "Compute_loss currently required padded GraphsTuple ")
 
@@ -126,13 +125,13 @@ if __name__ == "__main__":
       # Train for one epoch.
       rng, subkey = jax.random.split(rng)
       params, state, opt_state, train_metrics = train_epoch(
-          train_loss_and_grad_fn, params, state, subkey, opt_state, opt_update, train)
+          train_loss_and_grad_fn, params, state, subkey, opt_state, opt_update, trainloader)
       if print_epoch_metrics:
         print(
             f'Epoch {epoch} - train loss: {train_metrics["loss"]}')
 
       # Evaluate on the validation set.
-      val_metrics = evaluate_epoch(eval_loss_fn, params, state, val)
+      val_metrics = evaluate_epoch(eval_loss_fn, params, state, valloader)
       if print_epoch_metrics:
         print(
             f'Epoch {epoch} - val loss: {val_metrics["loss"]}')
@@ -143,6 +142,17 @@ if __name__ == "__main__":
                    'time': time_elapsed} | {'train ' + k: v for k,
                                             v in train_metrics.items()} | {'val ' + k: v for k,
                                                                            v in val_metrics.items()})
+    if args.truncate_to:
+      valloader = DataLoader(
+          np.asarray(
+              dataset.val,
+              dtype=object),
+          1,
+          rng=None)
+      full_val_metrics = evaluate_epoch(eval_loss_fn, params, state, valloader)
+      print("===Full val metrics===\n", full_val_metrics)
+      if args.wandb:
+        wandb.log({'full_val ' + k: v for k, v in full_val_metrics.items()})
 
     # finish wandb normally
     wandb.finish()

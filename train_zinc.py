@@ -8,12 +8,13 @@ import jraph
 import optax
 
 from type_aliases import (Metrics, TrainResult, LabelledGraphs, LabelledGraph)
+from utils import DataLoader
 
 
 def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.State,
-                 datapoint: LabelledGraph, rng: jax.random.KeyArray, is_training: bool) -> Tuple[jnp.ndarray, hk.State]:
+                 batch: LabelledGraph, rng: jax.random.KeyArray, is_training: bool) -> Tuple[jnp.ndarray, hk.State]:
   """Compute the loss for a given dataset."""
-  graph, label = datapoint
+  graph, label = batch
   scores, state = net.apply(params, state, rng, graph, is_training=is_training)
 
   mask = jraph.get_graph_padding_mask(graph)
@@ -23,14 +24,14 @@ def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.Stat
 
 
 def train_epoch(loss_and_grad_fn, params: hk.Params, state: hk.State, rng: jax.random.KeyArray,
-                opt_state: optax.OptState, opt_update: optax.TransformUpdateFn, ds: LabelledGraphs) -> TrainResult:
+                opt_state: optax.OptState, opt_update: optax.TransformUpdateFn, ds: DataLoader) -> TrainResult:
   """Train for one epoch."""
 
   losses = []
-  for graph, label in ds:
+  for batch in ds:
     rng, subkey = jax.random.split(rng)
     (loss, state), grads = loss_and_grad_fn(
-      params, state, (graph, label), subkey)
+      params, state, batch, subkey)
     updates, opt_state = opt_update(grads, opt_state, params)
     params = optax.apply_updates(params, updates)
     losses.append(loss)
@@ -40,13 +41,14 @@ def train_epoch(loss_and_grad_fn, params: hk.Params, state: hk.State, rng: jax.r
 
 
 def evaluate_epoch(loss_fn, params: hk.Params,
-                   state: hk.State, ds: LabelledGraphs) -> Metrics:
+                   state: hk.State, ds: DataLoader) -> Metrics:
   """Evaluate for one epoch."""
 
   losses = []
-  for graph, label in ds:
+  for batch in ds:
+    # TODO: Average loss according to unpadded graph count or set batch size to divisor of val and test length
     # State shouldn't change during evaluation
-    loss, _ = loss_fn(params, state, (graph, label))
+    loss, _ = loss_fn(params, state, batch)
     losses.append(loss)
 
   metrics = {"loss": float(jnp.mean(jnp.asarray(losses)))}

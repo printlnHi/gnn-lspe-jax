@@ -19,6 +19,45 @@ def _nearest_bigger_power_of_two(x: int) -> int:
   return y
 
 
+def pad_labelled_graph_to_nearest_power_of_two(
+  labelled_graph: LabelledGraph, batch_size=None) -> LabelledGraph:
+  """Pads a batched `GraphsTuple` to the nearest power of two.
+  For example, if a `GraphsTuple` has 7 nodes, 5 edges and 3 graphs, this method
+  would pad the `GraphsTuple` nodes and edges:
+    7 nodes --> 8 nodes (2^3)
+    5 edges --> 8 edges (2^3)
+  And since padding is accomplished using `jraph.pad_with_graphs`, an extra
+  graph and node is added:
+    8 nodes --> 9 nodes
+    3 graphs --> 4 graphs
+  Args:
+    labelled_graph: a batched LabelledGraph (can be batch size 1).
+    batch_size: pad to at least batch_size+1
+  Returns:
+    A LabelledGraph padded to the nearest power of two.
+  Adapted from https://github.com/deepmind/jraph/blob/master/jraph/ogb_examples/train.py
+  """
+  graphs_tuple, label = labelled_graph
+  # Add 1 since we need at least one padding node for pad_with_graphs.
+  pad_nodes_to = _nearest_bigger_power_of_two(jnp.sum(graphs_tuple.n_node)) + 1
+  pad_edges_to = _nearest_bigger_power_of_two(jnp.sum(graphs_tuple.n_edge))
+  # Add 1 since we need at least one padding graph for pad_with_graphs.
+  # We do not pad to nearest power of two because the batch size is fixed.
+  # TODO - make sure batch size is fixed based on how we handle the last batch —
+  #  could pad to batch_size+1 as a constant
+  n = graphs_tuple.n_node.shape[0]
+  if batch_size == None:
+    pad_graphs_to = n + 1
+  else:
+    pad_graphs_to = max(n, batch_size) + 1
+  padded_graphs_tuple = jraph.pad_with_graphs(graphs_tuple, pad_nodes_to, pad_edges_to,
+                                              pad_graphs_to)
+  label_padding_shape = (pad_graphs_to - n, ) + label.shape[1:]
+  padded_label = jnp.concatenate([label, jnp.zeros(label_padding_shape)])
+
+  return padded_graphs_tuple, padded_label
+
+
 def pad_graph_to_nearest_power_of_two(
         graphs_tuple: jraph.GraphsTuple) -> jraph.GraphsTuple:
   """Pads a batched `GraphsTuple` to the nearest power of two.
@@ -41,6 +80,8 @@ def pad_graph_to_nearest_power_of_two(
   pad_edges_to = _nearest_bigger_power_of_two(jnp.sum(graphs_tuple.n_edge))
   # Add 1 since we need at least one padding graph for pad_with_graphs.
   # We do not pad to nearest power of two because the batch size is fixed.
+  # TODO - make sure batch size is fixed based on how we handle the last batch —
+  #  could pad to batch_size+1 as a constant
   pad_graphs_to = graphs_tuple.n_node.shape[0] + 1
   return jraph.pad_with_graphs(graphs_tuple, pad_nodes_to, pad_edges_to,
                                pad_graphs_to)
@@ -73,18 +114,24 @@ def create_optimizer(
 
 
 class DataLoaderIterator:
-  def __init__(self, dataset, batch_indicies):
+  def __init__(self, dataset, batch_indicies, batch_size):
     self.dataset = dataset
     self.batch_indicies = batch_indicies
     self.batch_index = 0
+    self.batch_size = batch_size
 
-  def __next__(self) -> Collection[LabelledGraph]:
+  def __next__(self) -> LabelledGraph:
     if self.batch_index >= len(self.batch_indicies):
       raise StopIteration
-    batch = [self.dataset[index]
-             for index in self.batch_indicies[self.batch_index]]
+    batch_graphs = [self.dataset[index][0]
+                    for index in self.batch_indicies[self.batch_index]]
+    batch_labels = [self.dataset[index][1]
+                    for index in self.batch_indicies[self.batch_index]]
+    batch_graph = jraph.batch(batch_graphs)
+    batch_label = jnp.concatenate(batch_labels)
     self.batch_index += 1
-    return batch
+    return pad_labelled_graph_to_nearest_power_of_two(
+      (batch_graph, batch_label), self.batch_size)
 
 
 class DataLoader:
@@ -109,4 +156,4 @@ class DataLoader:
       indicies = jnp.arange(n)
     split_points = jnp.arange(self.batch_size, n, self.batch_size)
     batch_indicies = np.split(indicies, split_points)
-    return DataLoaderIterator(self.dataset, batch_indicies)
+    return DataLoaderIterator(self.dataset, batch_indicies, self.batch_size)
