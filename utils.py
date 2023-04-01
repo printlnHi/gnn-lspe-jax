@@ -5,11 +5,12 @@ import jax.numpy as jnp
 import jraph
 import numpy as np
 import optax
+from typing import Tuple
 
 from type_aliases import LabelledGraph, LabelledGraphs
 
 
-def _nearest_bigger_power_of_two(x: int) -> int:
+def _next_power_of_two(x: int) -> int:
   """Computes the nearest power of two greater than x for padding.
   Adapted from https://github.com/deepmind/jraph/blob/master/jraph/ogb_examples/train.py
   """
@@ -19,28 +20,22 @@ def _nearest_bigger_power_of_two(x: int) -> int:
   return y
 
 
-def pad_labelled_graph_to_nearest_power_of_two(
+def pad_batch_labelled_graph(
   labelled_graph: LabelledGraph, batch_size=None) -> LabelledGraph:
-  """Pads a batched `GraphsTuple` to the nearest power of two.
-  For example, if a `GraphsTuple` has 7 nodes, 5 edges and 3 graphs, this method
-  would pad the `GraphsTuple` nodes and edges:
-    7 nodes --> 8 nodes (2^3)
-    5 edges --> 8 edges (2^3)
-  And since padding is accomplished using `jraph.pad_with_graphs`, an extra
-  graph and node is added:
-    8 nodes --> 9 nodes
-    3 graphs --> 4 graphs
+  """Pads the edges and nodes of a `LabelledGraph` to the next power of two (+1 for nodes). Adds one more
+  graph if batch_size=None, otherwise adds enough graphs to reach batch_size+1. Labelled padded
+  to the number of graphs with zeros.
   Args:
     labelled_graph: a batched LabelledGraph (can be batch size 1).
-    batch_size: pad to at least batch_size+1
+    batch_size: pad to at least batch_size+1 graphs
   Returns:
     A LabelledGraph padded to the nearest power of two.
   Adapted from https://github.com/deepmind/jraph/blob/master/jraph/ogb_examples/train.py
   """
   graphs_tuple, label = labelled_graph
   # Add 1 since we need at least one padding node for pad_with_graphs.
-  pad_nodes_to = _nearest_bigger_power_of_two(jnp.sum(graphs_tuple.n_node)) + 1
-  pad_edges_to = _nearest_bigger_power_of_two(jnp.sum(graphs_tuple.n_edge))
+  pad_nodes_to = _next_power_of_two(jnp.sum(graphs_tuple.n_node)) + 1
+  pad_edges_to = _next_power_of_two(jnp.sum(graphs_tuple.n_edge))
   # Add 1 since we need at least one padding graph for pad_with_graphs.
   # We do not pad to nearest power of two because the batch size is fixed.
   # TODO - make sure batch size is fixed based on how we handle the last batch —
@@ -76,8 +71,8 @@ def pad_graph_to_nearest_power_of_two(
   Adapted from https://github.com/deepmind/jraph/blob/master/jraph/ogb_examples/train.py
   """
   # Add 1 since we need at least one padding node for pad_with_graphs.
-  pad_nodes_to = _nearest_bigger_power_of_two(jnp.sum(graphs_tuple.n_node)) + 1
-  pad_edges_to = _nearest_bigger_power_of_two(jnp.sum(graphs_tuple.n_edge))
+  pad_nodes_to = _next_power_of_two(jnp.sum(graphs_tuple.n_node)) + 1
+  pad_edges_to = _next_power_of_two(jnp.sum(graphs_tuple.n_edge))
   # Add 1 since we need at least one padding graph for pad_with_graphs.
   # We do not pad to nearest power of two because the batch size is fixed.
   # TODO - make sure batch size is fixed based on how we handle the last batch —
@@ -120,7 +115,7 @@ class DataLoaderIterator:
     self.batch_index = 0
     self.batch_size = batch_size
 
-  def __next__(self) -> LabelledGraph:
+  def __next__(self) -> Tuple[LabelledGraph, int]:
     if self.batch_index >= len(self.batch_indicies):
       raise StopIteration
     batch_graphs = [self.dataset[index][0]
@@ -130,8 +125,8 @@ class DataLoaderIterator:
     batch_graph = jraph.batch(batch_graphs)
     batch_label = jnp.concatenate(batch_labels)
     self.batch_index += 1
-    return pad_labelled_graph_to_nearest_power_of_two(
-      (batch_graph, batch_label), self.batch_size)
+    return (pad_batch_labelled_graph(
+      (batch_graph, batch_label), self.batch_size), len(batch_graphs))
 
 
 class DataLoader:

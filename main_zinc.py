@@ -2,20 +2,16 @@ import argparse
 import functools
 import json
 import time
-from typing import Any, Dict, List, Tuple
 
 import haiku as hk
 import jax
-import jax.numpy as jnp
-import jraph
-import optax
 import numpy as np
 
 import datasets
 import wandb
 from nets.zinc import gnn_model
 from train_zinc import train_epoch, evaluate_epoch, compute_loss
-from utils import create_optimizer, pad_all, DataLoader
+from utils import create_optimizer, DataLoader
 
 if __name__ == "__main__":
   print("jax backend:", jax.lib.xla_bridge.get_backend().platform)
@@ -83,6 +79,9 @@ if __name__ == "__main__":
           dtype=object),
       hyper_params["batch_size"],
       rng=None)
+  testloader = DataLoader(
+    np.asarray(test, dtype=object), hyper_params["batch_size"]
+  )
 
   net_params["num_atom_type"] = dataset.num_atom_type
   net_params["num_bond_type"] = dataset.num_bond_type
@@ -139,9 +138,8 @@ if __name__ == "__main__":
       if args.wandb:
         time_elapsed = time.time() - start_time
         wandb.log({'epoch': epoch,
-                   'time': time_elapsed} | {'train ' + k: v for k,
-                                            v in train_metrics.items()} | {'val ' + k: v for k,
-                                                                           v in val_metrics.items()})
+                   'time': time_elapsed} | {'train ' + k: v for k, v in train_metrics.items()} | {'val ' + k: v for k, v in val_metrics.items()})
+
     if args.truncate_to:
       valloader = DataLoader(
           np.asarray(
@@ -149,13 +147,29 @@ if __name__ == "__main__":
               dtype=object),
           1,
           rng=None)
-      full_val_metrics = evaluate_epoch(eval_loss_fn, params, state, valloader)
-      print("===Full val metrics===\n", full_val_metrics)
-      if args.wandb:
-        wandb.log({'full_val ' + k: v for k, v in full_val_metrics.items()})
 
-    # finish wandb normally
-    wandb.finish()
+      final_val_metrics = evaluate_epoch(
+          eval_loss_fn, params, state, valloader)
+    else:
+      final_val_metrics = val_metrics
+
+    final_test_metrics = evaluate_epoch(
+        eval_loss_fn, params, state, testloader)
+
+    # Combine final_test_metric and final_val_metrics
+    final_metrics = {
+        'final_val ' + k: v for k,
+        v in final_val_metrics.items()} | {
+        'final_test ' + k: v for k,
+        v in final_test_metrics.items()}
+    print("===Final metrics (untruncated)===")
+    print(final_metrics)
+    if args.wandb:
+      wandb.log(final_metrics)
+
+    if args.wandb:
+      # finish wandb normally
+      wandb.finish()
   except Exception as e:
     # finish wandb noting error then reraise exception
     wandb.finish(exit_code=1)

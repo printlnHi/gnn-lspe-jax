@@ -32,11 +32,11 @@ def GatedGCNLayer(output_dim, weight_on_edges=True,
     batch_norm_edge = hk.BatchNorm(
         create_scale=True,
         create_offset=True,
-        decay_rate=0.9)
+        decay_rate=0.9, name="batch_norm_edge")
     batch_norm_node = hk.BatchNorm(
         create_scale=True,
         create_offset=True,
-        decay_rate=0.9)
+        decay_rate=0.9, name="batch_norm_node")
     # TODO: Check if batch norm parameters are the same as those of pytorch
 
     nodes, edges, receivers, senders, _, _, _ = graph

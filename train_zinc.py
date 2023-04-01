@@ -28,15 +28,20 @@ def train_epoch(loss_and_grad_fn, params: hk.Params, state: hk.State, rng: jax.r
   """Train for one epoch."""
 
   losses = []
-  for batch in ds:
+  lengths = []
+  for batch, length in ds:
     rng, subkey = jax.random.split(rng)
     (loss, state), grads = loss_and_grad_fn(
       params, state, batch, subkey)
     updates, opt_state = opt_update(grads, opt_state, params)
     params = optax.apply_updates(params, updates)
     losses.append(loss)
+    lengths.append(length)
+  losses = jnp.asarray(losses)
+  lengths = jnp.asarray(lengths)
+  loss = jnp.sum(losses * lengths) / jnp.sum(lengths)
 
-  metrics = {"loss": float(jnp.mean(jnp.asarray(losses)))}
+  metrics = {"loss": float(loss)}
   return params, state, opt_state, metrics
 
 
@@ -45,11 +50,15 @@ def evaluate_epoch(loss_fn, params: hk.Params,
   """Evaluate for one epoch."""
 
   losses = []
-  for batch in ds:
-    # TODO: Average loss according to unpadded graph count or set batch size to divisor of val and test length
+  lengths = []
+  for batch, length in ds:
     # State shouldn't change during evaluation
     loss, _ = loss_fn(params, state, batch)
     losses.append(loss)
+    lengths.append(length)
+  losses = jnp.asarray(losses)
+  lengths = jnp.asarray(lengths)
+  loss = jnp.sum(losses * lengths) / jnp.sum(lengths)
 
-  metrics = {"loss": float(jnp.mean(jnp.asarray(losses)))}
+  metrics = {"loss": float(loss)}
   return metrics
