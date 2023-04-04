@@ -9,9 +9,11 @@ import jraph
 from layers.GatedGCNLayer import GatedGCNLayer
 from layers.mlp_readout_layer import mlp_readout
 from type_aliases import GraphClassifierFn
+from utils import HaikuDebug
 
 
-def gnn_model(net_params: Dict[str, Any]) -> GraphClassifierFn:
+def gnn_model(net_params: Dict[str, Any],
+              debug: bool = False) -> GraphClassifierFn:
   num_atom_type = net_params['num_atom_type']
   num_bond_type = net_params['num_bond_type']
   hidden_dim = net_params['hidden_dim']
@@ -86,6 +88,7 @@ def gnn_model(net_params: Dict[str, Any]) -> GraphClassifierFn:
     for layer in layers:
       updated_graph = layer(updated_graph, is_training=is_training)
     nodes, edges, _, _, _, _, _ = updated_graph
+    HaikuDebug("update_graph", enable=debug)(updated_graph)
     h = nodes['feat']
 
     if pe_init == 'rand_walk':
@@ -102,16 +105,25 @@ def gnn_model(net_params: Dict[str, Any]) -> GraphClassifierFn:
             n_node.shape[0]),
         n_node,
         total_repeat_length=sum_n_node)
+    HaikuDebug("graph_indicies", enable=debug)(graph_indicies)
+    # Set NaNs to 0 to avoid NaNs in the loss.
+    aux_zeros = jnp.zeros((num_graphs, hidden_dim))
+    aux_ids = jnp.arange(num_graphs)
+    h = jnp.concatenate([h, aux_zeros])
+    graph_indicies = jnp.concatenate([graph_indicies, aux_ids])
     if readout == 'sum':
       hg = jax.ops.segment_sum(h, graph_indicies, num_segments=num_graphs)
     elif readout == 'max':
+      # TODO: Should consider using aux value of -inf instead of 0 for max
       hg = jax.ops.segment_max(h, graph_indicies, num_segments=num_graphs)
     else:
       # mean
       hg = jax.ops.segment_sum(h, graph_indicies, num_segments=num_graphs)
       hg /= jnp.expand_dims(n_node, axis=1).astype(jnp.float32)
-
-    return jnp.squeeze(mlp_readout(
-      hg, input_dim=out_dim, output_dim=1), axis=1)
+    hg = jnp.nan_to_num(hg)
+    HaikuDebug("hg", enable=debug)(hg)
+    mlp_result = mlp_readout(hg, input_dim=out_dim, output_dim=1)
+    HaikuDebug("mlp_result", enable=debug)(mlp_result)
+    return jnp.squeeze(mlp_result)
 
   return gated_gcn_net

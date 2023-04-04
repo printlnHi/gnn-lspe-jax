@@ -1,13 +1,16 @@
+from typing import Callable
+
 import haiku as hk
 import jax
 import jax.numpy as jnp
 import jax.tree_util as tree
 import jraph
-from typing import Callable
+
+from utils import HaikuDebug
 
 
 def GatedGCNLayer(output_dim, weight_on_edges=True,
-                  residual=True, dropout=0.0) -> Callable:
+                  residual=True, dropout=0.0, debug=False) -> Callable:
   """Returns a method that applies a GatedGCN layer.
 
   Args:
@@ -70,7 +73,9 @@ def GatedGCNLayer(output_dim, weight_on_edges=True,
     total_num_nodes = tree.tree_leaves(h)[0].shape[0]
 
     eta = A(h[i]) + B(h[j]) + C(e)
+    HaikuDebug("eta", enable=debug)(eta)
     edge_layer_features = jax.nn.relu(batch_norm_edge(eta, is_training))
+    HaikuDebug("edge_layer_features", enable=debug)(edge_layer_features)
 
     if residual:
       e = e + edge_layer_features
@@ -90,8 +95,10 @@ def GatedGCNLayer(output_dim, weight_on_edges=True,
     agg_unattnd_messages = jax.ops.segment_sum(
         unattnd_messages, i, num_segments=sum_n_node)  # i or j?
     node_layer_features = U(h) + agg_unattnd_messages / w_sigma_sum
+    HaikuDebug("node_before", enable=debug)(node_layer_features)
     node_layer_features = jax.nn.relu(
       batch_norm_node(node_layer_features, is_training))
+    HaikuDebug("node_layer_features", enable=debug)(node_layer_features)
 
     if residual:
       h = h + node_layer_features
@@ -104,6 +111,7 @@ def GatedGCNLayer(output_dim, weight_on_edges=True,
 
     nodes = dict(nodes | {'feat': h})
     edges = dict(edges | {'feat': e})
-    return graph._replace(nodes=nodes, edges=edges)
-
+    output = graph._replace(nodes=nodes, edges=edges)
+    HaikuDebug("output", enable=debug)(output)
+    return output
   return _ApplyGatedGCN

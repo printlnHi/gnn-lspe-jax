@@ -3,6 +3,7 @@ from typing import Any, Collection, Dict, Optional
 import jax
 import jax.numpy as jnp
 import jraph
+import haiku as hk
 import numpy as np
 import optax
 from typing import Tuple
@@ -152,3 +153,22 @@ class DataLoader:
     split_points = jnp.arange(self.batch_size, n, self.batch_size)
     batch_indicies = np.split(indicies, split_points)
     return DataLoaderIterator(self.dataset, batch_indicies, self.batch_size)
+
+
+class HaikuDebug(hk.Module):
+  def __init__(self, name=None, label=None, enable: bool = True):
+    self.name = name
+    self.label = label
+    if self.name is None and self.label is None:
+      self.name = self.label = "HaikuDebug"
+    elif self.name is None:
+      self.name = self.label
+    elif self.label is None:
+      self.label = self.name
+    self.enable = enable
+
+    super().__init__(name=name)
+
+  def __call__(self, x):
+    if self.enable:
+      print(f"<{self.label}> {x} </{self.label}>")
