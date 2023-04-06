@@ -66,7 +66,7 @@ if __name__ == "__main__":
     raise NotImplementedError(
       "Compute_loss currently required padded GraphsTuple ")
 
-  if hyper_params["truncate_to"]:
+  if "truncate_to" in hyper_params and hyper_params["truncate_to"] is not None:
     train = train[:hyper_params["truncate_to"]]
     val = val[:hyper_params["truncate_to"]]
 
