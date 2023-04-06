@@ -1,9 +1,11 @@
 # Bash script to run all of the zinc experiments by calling main_zinc.py
-# Calling convention: bash zinc.sh <wandb_run_name_suffix> <connect_to_wandb>
+# Calling convention: bash zinc.sh${repo_dir}/configs <wandb_run_name_suffix> <connect_to_wandb>
 
-wandb_run_name_suffix=$1
-connect_to_wandb=$2
+repo_dir=$1
+wandb_run_name_suffix=$2
+connect_to_wandb=$3
 
+cd "${repo_dir}"
 program="main_zinc.py"
 
 arguments=(
@@ -21,6 +23,7 @@ wandb_run_names=(
   "proto_zinc_trunc_256_bs16"
   "proto_zinc_trunc_1024_bs32"
 )
+
 
 for i in "${!arguments[@]}"; do
   echo "Running ${program} ${arguments[i]}"
