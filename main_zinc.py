@@ -52,6 +52,8 @@ if __name__ == "__main__":
     hyper_params["seed"] = args.seed
   if args.batch_size:
     hyper_params["batch_size"] = args.batch_size
+  if args.truncate_to:
+    hyper_params["truncate_to"] = args.truncate_to
 
   rng = jax.random.PRNGKey(hyper_params["seed"])
 
@@ -64,9 +66,9 @@ if __name__ == "__main__":
     raise NotImplementedError(
       "Compute_loss currently required padded GraphsTuple ")
 
-  if args.truncate_to:
-    train = train[:args.truncate_to]
-    val = val[:args.truncate_to]
+  if hyper_params["truncate_to"]:
+    train = train[:hyper_params["truncate_to"]]
+    val = val[:hyper_params["truncate_to"]]
 
   rng, subkey = jax.random.split(rng)
   trainloader = DataLoader(
@@ -87,10 +89,11 @@ if __name__ == "__main__":
   net_params["num_bond_type"] = dataset.num_bond_type
 
   if args.wandb:
-    wandb.init(
+    tags = ["zinc"]
+    run = wandb.init(
         project=args.wandb_project,
         entity=args.wandb_entity,
-        name=args.wandb_run_name)
+        name=args.wandb_run_name, config=hyper_params, tags=tags)
 
   try:
     start_time = time.time()
@@ -156,11 +159,10 @@ if __name__ == "__main__":
     final_test_metrics = evaluate_epoch(
         eval_loss_fn, params, state, testloader)
 
-    # Combine final_test_metric and final_val_metrics
     final_metrics = {
-        'final_val ' + k: v for k,
+        'final val ' + k: v for k,
         v in final_val_metrics.items()} | {
-        'final_test ' + k: v for k,
+        'final test ' + k: v for k,
         v in final_test_metrics.items()}
     print("===Final metrics (untruncated)===")
     print(final_metrics)
