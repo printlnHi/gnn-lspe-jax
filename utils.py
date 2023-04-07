@@ -6,7 +6,7 @@ import jraph
 import haiku as hk
 import numpy as np
 import optax
-from typing import Tuple
+from typing import Tuple, Iterator
 
 from type_aliases import LabelledGraph, LabelledGraphs
 
@@ -129,6 +129,9 @@ class DataLoaderIterator:
     return (pad_batch_labelled_graph(
       (batch_graph, batch_label), self.batch_size), len(batch_graphs))
 
+  def __iter__(self) -> Iterator[Tuple[LabelledGraph, int]]:
+    return self
+
 
 class DataLoader:
   def __init__(self, dataset: np.ndarray, batch_size: int,
@@ -142,8 +145,9 @@ class DataLoader:
     self.dataset = dataset
     self.batch_size = batch_size
     self.rng = rng
+    self.length = (len(dataset) + batch_size - 1) // batch_size
 
-  def __iter__(self) -> DataLoaderIterator:
+  def __iter__(self) -> Iterator[Tuple[LabelledGraph, int]]:
     n = len(self.dataset)
     if self.rng is not None:
       self.rng, subkey = jax.random.split(self.rng)
@@ -153,6 +157,9 @@ class DataLoader:
     split_points = jnp.arange(self.batch_size, n, self.batch_size)
     batch_indicies = np.split(indicies, split_points)
     return DataLoaderIterator(self.dataset, batch_indicies, self.batch_size)
+
+  def __len__(self) -> int:
+    return self.length
 
 
 class HaikuDebug(hk.Module):
