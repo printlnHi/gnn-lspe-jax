@@ -17,7 +17,7 @@ from train_zinc import train_epoch, evaluate_epoch, compute_loss, train_batch, t
 from utils import create_optimizer, DataLoader, power_of_two_padding, GraphsSize, PaddingScheme
 
 if __name__ == "__main__":
-  config.update("jax_log_compiles", True)
+  #config.update("jax_log_compiles", True)
   '''
   import logging
   logging.getLogger("jax").setLevel(logging.DEBUG)
@@ -43,16 +43,19 @@ if __name__ == "__main__":
   parser.add_argument("--wandb_run_name", type=str, default="proto_zinc")
   parser.add_argument("--print_every", type=int, default=100)
 
+  # Arguments for development:
   parser.add_argument("--no_jit", action="store_true")
   parser.add_argument("--no_update_jit", action="store_true")
-  parser.add_argument("--eval_jit", action="store_true")
+  parser.add_argument("--no_eval_jit", action="store_true")
   parser.add_argument("--truncate_to", type=int, default=None)
-  # Arguments for development:
   parser.add_argument("--new_train", action="store_true")
+  parser.add_argument("--skip_final", action="store_true")
 
+  # Arguments for development:
   parser.add_argument("--epochs", type=int)
   parser.add_argument("--seed", type=int)
   parser.add_argument("--batch_size", type=int)
+
   #parser.add_argument("--padding_scheme", type=str, default="power_of_two")
 
   args = parser.parse_args()
@@ -71,7 +74,7 @@ if __name__ == "__main__":
   hyper_params["truncate_to"] = args.truncate_to
   hyper_params["no_jit"] = args.no_jit
   hyper_params["no_update_jit"] = args.no_update_jit
-  hyper_params["eval_jit"] = args.eval_jit
+  hyper_params["no_eval_jit"] = args.no_eval_jit
 
   # network parameters
   net_params = config["net_params"]
@@ -130,6 +133,7 @@ if __name__ == "__main__":
 
   train_loss_and_grad_fn = jax.value_and_grad(
     functools.partial(compute_loss, net, is_training=True), has_aux=True)
+
   if args.new_train:
     train_batch_fn = functools.partial(
         train_batch, train_loss_and_grad_fn, opt_update)
@@ -147,7 +151,7 @@ if __name__ == "__main__":
   # Rng only used for dropout, not needed for eval
   eval_loss_fn = functools.partial(
       compute_loss, net, rng=None, is_training=False)
-  if hyper_params["eval_jit"]:
+  if not hyper_params["no_eval_jit"]:
     eval_loss_fn = jax.jit(eval_loss_fn)
 
   # ==================== Training ====================
