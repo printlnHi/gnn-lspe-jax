@@ -1,6 +1,7 @@
 #!/bin/bash
 # Bash script to run all of the zinc experiments by calling main_zinc.py
 # Calling convention: bash zinc.sh repo_dir [--wandb_run_name_suffix string] [--wandb] [--min_truncation int] [--max_truncation int] [--|--verbatim_args <args>*]
+set -e # Exit on single error
 
 repo_dir=$1
 shift
