@@ -4,4 +4,7 @@ wandb/
 **/*.pkl
 **/*.pickle
 *.ipynb
-**/*.DS_Store
+**/*.ds_store
+out/**
+scratch/**
+scratch*
