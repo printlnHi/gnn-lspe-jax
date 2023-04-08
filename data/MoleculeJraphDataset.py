@@ -1,11 +1,11 @@
 from typing import Any, Tuple, List
 
-from type_aliases import LabelledGraphs
+from type_aliases import LabelledGraph
 
 
 class MoleculeJraphDataset:
-  def __init__(self, train: LabelledGraphs, test: LabelledGraphs,
-               val: LabelledGraphs, num_atom_type: int, num_bond_type: int):
+  def __init__(self, train: List[LabelledGraph], test: List[LabelledGraph],
+               val: List[LabelledGraph], num_atom_type: int, num_bond_type: int):
     self.train = train
     self.test = test
     self.val = val

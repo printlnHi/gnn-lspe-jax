@@ -7,26 +7,29 @@ import jraph
 import optax
 
 LabelledGraph = Tuple[jraph.GraphsTuple, Any]
-LabelledGraphs = List[LabelledGraph]
 
 Metrics = Dict[str, float]
 
-MutagEvaluateFn = Callable[[hk.Params, LabelledGraphs], Metrics]
+MutagEvaluateFn = Callable[[hk.Params, List[LabelledGraph]], Metrics]
 MutagTrainResult = Tuple[hk.Params, optax.OptState, Metrics]
 MutagTrainFn = Callable[[hk.Params,
                          optax.OptState,
                          optax.TransformUpdateFn,
-                         LabelledGraphs],
+                         List[LabelledGraph]],
                         MutagTrainResult]
 
-EvaluateFn = Callable[[hk.Params, hk.State, LabelledGraphs], Metrics]
+EvaluateFn = Callable[[hk.Params, hk.State, List[LabelledGraph]], Metrics]
+TrainBatchResult = Tuple[hk.Params, hk.State, optax.OptState, float]
 TrainResult = Tuple[hk.Params, hk.State, optax.OptState, Metrics]
 TrainFn = Callable[[hk.Params,
                    hk.State,
                    jax.random.KeyArray,
                    optax.OptState,
                    optax.TransformUpdateFn,
-                   LabelledGraphs],
+                   List[LabelledGraph]],
                    TrainResult]
 
 GraphClassifierFn = Callable[[jraph.GraphsTuple, bool], jnp.ndarray]
+
+# TODO: Cleanup unused type aliases, mb rename this file to just be types
+# if not all are aliases

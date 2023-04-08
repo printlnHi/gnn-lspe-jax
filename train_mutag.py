@@ -8,7 +8,7 @@ import jraph
 import optax
 
 from type_aliases import (MutagEvaluateFn, Metrics, MutagTrainFn,
-                          MutagTrainResult, LabelledGraphs)
+                          MutagTrainResult, LabelledGraph)
 
 
 def compute_loss(net: hk.Transformed, params: hk.Params, graph: jraph.GraphsTuple, label: jnp.ndarray,
@@ -70,7 +70,7 @@ def train_epoch(net: hk.Transformed, params: hk.Params, opt_state: optax.OptStat
 
 
 def evaluate_epoch(net: hk.Transformed,
-                   params: hk.Params, ds: LabelledGraphs) -> Metrics:
+                   params: hk.Params, ds: List[LabelledGraph]) -> Metrics:
   compute_loss_fn = functools.partial(compute_loss, net)
   compute_loss_fn = jax.jit(compute_loss_fn)
 
