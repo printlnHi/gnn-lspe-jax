@@ -7,6 +7,7 @@ import time
 
 import haiku as hk
 import jax
+from jax.config import config
 import numpy as np
 
 import datasets
@@ -16,6 +17,12 @@ from train_zinc import train_epoch, evaluate_epoch, compute_loss, train_batch, t
 from utils import create_optimizer, DataLoader, power_of_two_padding, GraphsSize, PaddingScheme
 
 if __name__ == "__main__":
+  config.update("jax_log_compiles", True)
+  '''
+  import logging
+  logging.getLogger("jax").setLevel(logging.DEBUG)
+  '''
+
   print("jax backend:", jax.lib.xla_bridge.get_backend().platform)
   print("jax devices:", jax.devices())
   print()
@@ -46,6 +53,7 @@ if __name__ == "__main__":
   parser.add_argument("--epochs", type=int)
   parser.add_argument("--seed", type=int)
   parser.add_argument("--batch_size", type=int)
+  #parser.add_argument("--padding_scheme", type=str, default="power_of_two")
 
   args = parser.parse_args()
 
@@ -254,8 +262,7 @@ if __name__ == "__main__":
       wandb.log(final_metrics)
 
       # Only save the model or graph sizes if we are using wandb
-
-      out_dir = os.path.join(args.out_dir, run.id)
+      out_dir = os.path.join(args.out_dir, f"{run.name}-{run.id}")
       os.makedirs(out_dir, exist_ok=False)
       # TODO: Save the model
 
