@@ -59,8 +59,7 @@ def power_of_two_padding(size: GraphsSize, batch_size=None) -> GraphsSize:
     assert(n_graphs <= batch_size)
     n_graphs = batch_size + 1
 
-  return GraphsSize((_next_power_of_two(n_nodes) + 1,
-                    _next_power_of_two(n_edges), n_graphs))
+  return GraphsSize((n_nodes, n_edges, n_graphs))
 
 
 def monotonic_power_of_two_padding(
