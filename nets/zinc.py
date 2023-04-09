@@ -3,13 +3,18 @@ from typing import Any, Callable, Dict
 import haiku as hk
 import jax
 import jax.numpy as jnp
+import numpy as np
 import jraph
 
 # TODO: Should I rename to not be cased like a class?
-from layers.GatedGCNLayer import GatedGCNLayer
+# from layers.GatedGCNLayer import GatedGCNLayer
+#from layers.GatedGCNLayer_fn import GatedGCNLayer
+from layers.GatedGCNLayer_hk import GatedGCNLayer
 from layers.mlp_readout_layer import mlp_readout
 from type_aliases import GraphClassifierFn
 from utils import HaikuDebug
+
+g_init, g_apply = hk.transform_with_state(GatedGCNLayer)
 
 
 def gnn_model(net_params: Dict[str, Any],
@@ -66,13 +71,15 @@ def gnn_model(net_params: Dict[str, Any],
         "Random walk PE nor GatedGCNLSPELayer implemented yet")
     else:
       # NoPE or LapPE
-      layers = [
+      '''      layers = [
           GatedGCNLayer(
               hidden_dim,
               residual=residual,
               dropout=dropout) for _ in range(
               n_layers - 1)]
       layers.append(GatedGCNLayer(out_dim, residual=residual, dropout=dropout))
+      layers = np.array(layers)
+      '''
 
     # TODO: Will have to update this to propogate p features
     nodes = nodes | {'feat': h}
@@ -85,8 +92,19 @@ def gnn_model(net_params: Dict[str, Any],
         n_node=n_node,
         n_edge=n_edge,
         globals=globals)
-    for layer in layers:
-      updated_graph = layer(updated_graph, is_training=is_training)
+
+    '''for layer in layers:
+      updated_graph = layer(updated_graph, is_training=is_training)'''
+    for _ in range(n_layers - 1):
+      updated_graph = GatedGCNLayer(output_dim=hidden_dim, residual=residual, dropout=dropout,
+                                    )(updated_graph, is_training=is_training)
+    updated_graph = GatedGCNLayer(
+        output_dim=out_dim,
+        residual=residual,
+        dropout=dropout)(
+        updated_graph,
+        is_training=is_training)
+
     nodes, edges, _, _, _, _, _ = updated_graph
     HaikuDebug("update_graph", enable=debug)(updated_graph)
     h = nodes['feat']
