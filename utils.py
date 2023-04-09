@@ -1,12 +1,13 @@
-from typing import Any, Callable, Collection, Dict, Optional
+import time
+from typing import (Any, Callable, Collection, Dict, Iterator, NewType,
+                    Optional, Tuple)
 
+import haiku as hk
 import jax
 import jax.numpy as jnp
 import jraph
-import haiku as hk
 import numpy as np
 import optax
-from typing import Tuple, Iterator, NewType
 
 from type_aliases import LabelledGraph
 
@@ -107,6 +108,37 @@ def create_optimizer(
   # TODO: replace learning_rate with a scheduler that uses appropriate hyper parameters
   # TODO: understand what params "weight decay" is
   return optax.adam(learning_rate=hyper_params["init_lr"])
+
+
+def flat_data_loader(dataset, batch_size, padding_strategy, rng):
+  start_time = time.time()
+  n = len(dataset)
+  length = (n + batch_size - 1) // batch_size
+  missing = length * batch_size - n
+  if rng is not None:
+    batch_indicies = jax.random.permutation(rng, n)
+  else:
+    batch_indicies = jnp.arange(n)
+  indicies_time = time.time()
+  print("indicies time: ", indicies_time - start_time)
+
+  batches = []
+  for i in range(length):
+    indicies = batch_indicies[i * batch_size:(i + 1) * batch_size]
+    batch = [dataset[i] for i in indicies]
+    batch_graphs = [x[0] for x in batch]
+    batch_labels = [x[1] for x in batch]
+    labelled_graph = (
+        jraph.batch(batch_graphs),
+        jnp.concatenate(batch_labels))
+    batches.append(
+        (pad_labelled_graph(
+            labelled_graph,
+            padding_strategy),
+         len(batch)))
+  batches_time = time.time()
+  print("batches time: ", batches_time - indicies_time)
+  return batches
 
 
 class DataLoaderIterator:
