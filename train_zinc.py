@@ -114,17 +114,20 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
   loss_and_grad_times = jnp.asarray(loss_and_grad_times)
   opt_update_times = jnp.asarray(opt_update_times)
   opt_apply_times = jnp.asarray(opt_apply_times)
+  total_batch_times = loss_and_grad_times + opt_update_times + opt_apply_times
+
   mean_time_metrics = {
       "loss_and_grad_time": float(
           jnp.mean(loss_and_grad_times)),
       "opt_update_time": float(
           jnp.mean(opt_update_times)),
       "opt_apply_time": float(
-        jnp.mean(opt_apply_times))}
+        jnp.mean(opt_apply_times)), "total_batch_time": float(jnp.mean(total_batch_times))}
   timing_metrics = {
       "loss_and_grad_times": loss_and_grad_times,
       "opt_update_times": opt_update_times,
-      "opt_apply_times": opt_apply_times}
+      "opt_apply_times": opt_apply_times,
+      "total_batch_times": total_batch_times}
 
   metrics = {"loss": float(loss)} | mean_time_metrics | timing_metrics
   return params, state, opt_state, metrics
