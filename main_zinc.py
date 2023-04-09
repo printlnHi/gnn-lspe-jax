@@ -9,6 +9,7 @@ import haiku as hk
 import jax
 from jax.config import config
 import numpy as np
+import optax
 
 import datasets
 import wandb
@@ -49,13 +50,11 @@ if __name__ == "__main__":
   parser.add_argument("--no_eval_jit", action="store_true")
   parser.add_argument("--truncate_to", type=int, default=None)
   parser.add_argument("--new_train", action="store_true")
-  parser.add_argument("--skip_final", action="store_true")
-
-  # Arguments for development:
+  # parser.add_argument("--skip_final", action="store_true")
   parser.add_argument("--epochs", type=int)
   parser.add_argument("--seed", type=int)
   parser.add_argument("--batch_size", type=int)
-
+  parser.add_argument("--profile", action="store_true")
   #parser.add_argument("--padding_scheme", type=str, default="power_of_two")
 
   args = parser.parse_args()
@@ -80,7 +79,6 @@ if __name__ == "__main__":
   net_params = config["net_params"]
 
   # ==================== Data ====================
-
   dataset = datasets.zinc()
   net_params["num_atom_type"] = dataset.num_atom_type
   net_params["num_bond_type"] = dataset.num_bond_type
@@ -146,7 +144,7 @@ if __name__ == "__main__":
     if not hyper_params["no_update_jit"]:
       opt_update = jax.jit(opt_update)
     train_epoch_fn = functools.partial(
-        train_epoch, train_loss_and_grad_fn, opt_update)
+        train_epoch, train_loss_and_grad_fn, opt_update, optax.apply_updates)
 
   # Rng only used for dropout, not needed for eval
   eval_loss_fn = functools.partial(
@@ -171,6 +169,9 @@ if __name__ == "__main__":
     total_train_time = 0
     total_val_time = 0
 
+    if args.profile:
+      jax.profiler.start_trace("out", False, True)
+
     for epoch in range(hyper_params["epochs"]):
       print_epoch_metrics = epoch % args.print_every == 0 or epoch == hyper_params[
         "epochs"] - 1
@@ -185,6 +186,7 @@ if __name__ == "__main__":
       if print_epoch_metrics:
         print(
             f'Epoch {epoch} - train loss: {train_metrics["loss"]}')
+        print(train_metrics)
       train_finished = time.time()
 
       # Evaluate on the validation set.
@@ -218,6 +220,9 @@ if __name__ == "__main__":
         val_metrics = {'val ' + k: v for k, v in val_metrics.items()}
         wandb.log({"epoch": epoch} | timing_metrics |
                   train_metrics | val_metrics)
+
+    if args.profile:
+      jax.profiler.stop_trace()
 
     # ==================== Final evaluation ====================
     # We want padded graph sizes from the training loop only

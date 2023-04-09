@@ -10,6 +10,7 @@ dependencies:
  - numpy=1.22
  - conda-forge::wandb
  - pytorch # Pytorch and dgl are for dataset loading
+#- tensorflow # TODO - install GPU on Linux
  - pip:
    - jraph
    - dm-haiku

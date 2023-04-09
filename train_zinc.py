@@ -6,6 +6,7 @@ import jax
 import jax.numpy as jnp
 import jraph
 import optax
+import time
 
 from type_aliases import (
   Metrics,
@@ -72,26 +73,60 @@ def train_epoch_new(train_batch_fn, params: hk.Params, state: hk.State, rng: jax
   return params, state, opt_state, metrics
 
 
-def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, params: hk.Params, state: hk.State, rng: jax.random.KeyArray,
+def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply_updates, params: hk.Params, state: hk.State, rng: jax.random.KeyArray,
                 opt_state: optax.OptState, ds: DataLoader) -> TrainResult:
   """Train for one epoch."""
 
   losses = []
   lengths = []
+  loss_and_grad_times = []
+  opt_update_times = []
+  opt_apply_times = []
+
   subkeys = jax.random.split(rng, len(ds))
+
   for (batch, length), subkey in zip(ds, subkeys):
+    batch_start = time.time()
     (loss, state), grads = loss_and_grad_fn(
       params, state, batch, subkey)
-    updates, opt_state = opt_update(grads, opt_state, params)
-    params = optax.apply_updates(params, updates)
+    # grrads.block_until_ready()
+    loss_end = time.time()
+    updates, opt_state = opt_update(
+        grads, opt_state, params)
+    # updates.block_until_ready()
+    opt_update_end = time.time()
+    #params = optax.apply_updates(params, updates)
+    params = opt_apply_updates(params, updates)
+    # params.block_until_ready()
+    opt_end = time.time()
+
     #print("mlp/~/linear_0: ", params['mlp/~/linear_0']['w'])
     losses.append(loss)
     lengths.append(length)
+    loss_and_grad_times.append(loss_end - batch_start)
+    opt_update_times.append(opt_update_end - loss_end)
+    opt_apply_times.append(opt_end - opt_update_end)
+
   losses = jnp.asarray(losses)
   lengths = jnp.asarray(lengths)
   loss = jnp.sum(losses * lengths) / jnp.sum(lengths)
 
-  metrics = {"loss": float(loss)}
+  loss_and_grad_times = jnp.asarray(loss_and_grad_times)
+  opt_update_times = jnp.asarray(opt_update_times)
+  opt_apply_times = jnp.asarray(opt_apply_times)
+  mean_time_metrics = {
+      "loss_and_grad_time": float(
+          jnp.mean(loss_and_grad_times)),
+      "opt_update_time": float(
+          jnp.mean(opt_update_times)),
+      "opt_apply_time": float(
+        jnp.mean(opt_apply_times))}
+  timing_metrics = {
+      "loss_and_grad_times": loss_and_grad_times,
+      "opt_update_times": opt_update_times,
+      "opt_apply_times": opt_apply_times}
+
+  metrics = {"loss": float(loss)} | mean_time_metrics | timing_metrics
   return params, state, opt_state, metrics
 
 
