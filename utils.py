@@ -1,3 +1,4 @@
+from functools import partial
 import time
 from typing import (Any, Callable, Collection, Dict, Iterator, NewType,
                     Optional, Tuple)
@@ -110,22 +111,59 @@ def create_optimizer(
   return optax.adam(learning_rate=hyper_params["init_lr"])
 
 
+# @partial(jax.jit, static_argnames=["dataset", "batch_size"])
+@partial(jax.jit, static_argnames=["batch_size"])
+def __unpadded_flat_data_loader(dataset, batch_size, rng):
+  n = len(dataset)
+  length = (n + batch_size - 1) // batch_size
+  if rng is not None:
+    batch_indicies = jax.random.permutation(rng, n)
+  else:
+    batch_indicies = jnp.arange(n)
+
+  batches = []
+  for i in range(length):
+    batch = dataset[i * batch_size:(i + 1) * batch_size]
+    batch_graphs = [x[0] for x in batch]
+    batch_labels = [x[1] for x in batch]
+    labelled_graph = (
+        jraph.batch(batch_graphs),
+        jnp.concatenate(batch_labels))
+    batches.append(
+        (labelled_graph,
+         len(batch)))
+  return batches
+
+
+def flat_data_loader2(dataset, batch_size, padding_strategy, rng):
+  start_time = time.time()
+  unpadded = __unpadded_flat_data_loader(dataset, batch_size, rng)
+  unpadded_time = time.time()
+  batches = [(pad_labelled_graph(x[0], padding_strategy), x[1])
+             for x in unpadded]
+  batches_time = time.time()
+  print(f"total time: {batches_time - start_time} = unpadded: {unpadded_time - start_time} + batches: {batches_time - unpadded_time}")
+  return batches
+
+
 def flat_data_loader(dataset, batch_size, padding_strategy, rng):
   start_time = time.time()
   n = len(dataset)
   length = (n + batch_size - 1) // batch_size
-  missing = length * batch_size - n
+  #missing = length * batch_size - n
+  #e = jnp.array([])
+  #dataset = dataset + jraph.GraphsTuple(e, e, e, e, e, e, e) * missing
+  # n+=e
   if rng is not None:
     batch_indicies = jax.random.permutation(rng, n)
   else:
     batch_indicies = jnp.arange(n)
   indicies_time = time.time()
-  print("indicies time: ", indicies_time - start_time)
+  print("shuffle time: ", indicies_time - start_time)
 
   batches = []
   for i in range(length):
-    indicies = batch_indicies[i * batch_size:(i + 1) * batch_size]
-    batch = [dataset[i] for i in indicies]
+    batch = dataset[i * batch_size:(i + 1) * batch_size]
     batch_graphs = [x[0] for x in batch]
     batch_labels = [x[1] for x in batch]
     labelled_graph = (
@@ -137,7 +175,7 @@ def flat_data_loader(dataset, batch_size, padding_strategy, rng):
             padding_strategy),
          len(batch)))
   batches_time = time.time()
-  print("batches time: ", batches_time - indicies_time)
+  print(f"total time: {batches_time - start_time} = indicies: {indicies_time - start_time} + batches: {batches_time - indicies_time}")
   return batches
 
 

@@ -15,7 +15,7 @@ import datasets
 import wandb
 from nets.zinc import gnn_model
 from train_zinc import train_epoch, evaluate_epoch, compute_loss, train_batch, train_epoch_new
-from utils import create_optimizer, DataLoader, power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader
+from utils import create_optimizer, DataLoader, power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader, flat_data_loader2
 
 if __name__ == "__main__":
   #config.update("jax_log_compiles", True)
@@ -107,9 +107,8 @@ if __name__ == "__main__":
       hyper_params["batch_size"],
       rng=subkey, padding_strategy=padding_strategy)
   '''
-  trainloader = functools.partial(flat_data_loader,
+  trainloader = functools.partial(flat_data_loader2,
                                   train, hyper_params["batch_size"], padding_strategy)
-  #trainloader = jax.jit(trainloader)
   valloader = DataLoader(
       np.asarray(
           val,
