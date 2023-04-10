@@ -112,7 +112,7 @@ def create_optimizer(
   print("steps per epoch", steps_per_epoch)
   lr = optax.exponential_decay(
       init_value=hyper_params["init_lr"],
-      transition_steps=100 * steps_per_epoch,
+      transition_steps=hyper_params["transition_epochs"] * steps_per_epoch,
       decay_rate=hyper_params["lr_reduce_factor"],
       end_value=hyper_params["init_lr"] * 1e-2)
   # lr =hyper_params["init_lr"]

@@ -50,6 +50,7 @@ if __name__ == "__main__":
   parser.add_argument("--seed", type=int)
   parser.add_argument("--batch_size", type=int)
   parser.add_argument("--profile", action="store_true")
+  parser.add_argument("--transition_epochs", type=int, default=150)
   #parser.add_argument("--padding_scheme", type=str, default="power_of_two")
 
   args = parser.parse_args()
@@ -66,6 +67,7 @@ if __name__ == "__main__":
   if args.batch_size:
     hyper_params["batch_size"] = args.batch_size
   hyper_params["truncate_to"] = args.truncate_to
+  hyper_params["transition_epochs"] = args.transition_epochs
 
   # network parameters
   net_params = config["net_params"]
