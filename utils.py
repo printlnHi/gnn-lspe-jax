@@ -107,9 +107,11 @@ def create_optimizer(
   hyper_params: Dict[str, Any]) -> optax.GradientTransformation:
   # TODO: replace learning_rate with a scheduler that uses appropriate hyper parameters
   # TODO: understand what params "weight decay" is
+  steps_per_epoch = (
+      10000 + hyper_params["batch_size"] - 1) // hyper_params["batch_size"]
   lr = optax.exponential_decay(
       init_value=hyper_params["init_lr"],
-      transition_steps=200,
+      transition_steps=150 * steps_per_epoch,
       decay_rate=hyper_params["lr_reduce_factor"],
       end_value=hyper_params["min_lr"])
   # lr =hyper_params["init_lr"]
