@@ -105,15 +105,12 @@ def pad_labelled_graph(labelled_graph: LabelledGraph,
 
 def create_optimizer(
   hyper_params: Dict[str, Any]) -> optax.GradientTransformation:
-
   # TODO: replace learning_rate with a scheduler that uses appropriate hyper parameters
   # TODO: understand what params "weight decay" is
   return optax.adam(learning_rate=hyper_params["init_lr"])
 
 
-# For morning marcus: batch_size doesn't do anything
-@partial(jax.jit, static_argnames=["batch_size"])
-def __get__unpadded_batch(batch_size, batch):
+def __get__unpadded_batch(batch):
   batch_graphs = [x[0] for x in batch]
   batch_labels = [x[1] for x in batch]
   labelled_graph = (
@@ -122,60 +119,25 @@ def __get__unpadded_batch(batch_size, batch):
   return labelled_graph, len(batch)
 
 
-def flat_data_loader2(dataset, batch_size, padding_strategy, rng):
+def flat_data_loader(dataset, batch_size, padding_strategy, rng):
   start_time = time.time()
   n = len(dataset)
   length = (n + batch_size - 1) // batch_size
   if rng is not None:
     batch_indicies = jax.random.permutation(rng, n)
-    #dataset = [dataset[i] for i in batch_indicies]
+    dataset = [dataset[i] for i in batch_indicies]
   else:
     batch_indicies = jnp.arange(n)
   shuffle_time = time.time()
   unpadded = [
       __get__unpadded_batch(
-          batch_size,
-          batch=dataset[i * batch_size:(i + 1) * batch_size]
+          dataset[i * batch_size:(i + 1) * batch_size]
       ) for i in range(length)]
-  print(__get__unpadded_batch._cache_size())
   unpadded_time = time.time()
   batches = [(pad_labelled_graph(x[0], padding_strategy), x[1])
              for x in unpadded]
   batches_time = time.time()
   print(f"total time: {batches_time - start_time} = shuffle {shuffle_time-start_time} + unpadded: {unpadded_time - shuffle_time} + batches: {batches_time - unpadded_time}")
-  return batches
-
-
-def flat_data_loader(dataset, batch_size, padding_strategy, rng):
-  start_time = time.time()
-  n = len(dataset)
-  length = (n + batch_size - 1) // batch_size
-  #missing = length * batch_size - n
-  #e = jnp.array([])
-  #dataset = dataset + jraph.GraphsTuple(e, e, e, e, e, e, e) * missing
-  # n+=e
-  if rng is not None:
-    batch_indicies = jax.random.permutation(rng, n)
-  else:
-    batch_indicies = jnp.arange(n)
-  indicies_time = time.time()
-  print("shuffle time: ", indicies_time - start_time)
-
-  batches = []
-  for i in range(length):
-    batch = dataset[i * batch_size:(i + 1) * batch_size]
-    batch_graphs = [x[0] for x in batch]
-    batch_labels = [x[1] for x in batch]
-    labelled_graph = (
-        jraph.batch(batch_graphs),
-        jnp.concatenate(batch_labels))
-    batches.append(
-        (pad_labelled_graph(
-            labelled_graph,
-            padding_strategy),
-         len(batch)))
-  batches_time = time.time()
-  print(f"total time: {batches_time - start_time} = indicies: {indicies_time - start_time} + batches: {batches_time - indicies_time}")
   return batches
 
 

@@ -15,7 +15,7 @@ import datasets
 import wandb
 from nets.zinc import gnn_model
 from train_zinc import train_epoch, evaluate_epoch, compute_loss, train_batch, train_epoch_new
-from utils import create_optimizer, DataLoader, power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader, flat_data_loader2
+from utils import create_optimizer, DataLoader, power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader
 
 if __name__ == "__main__":
   #config.update("jax_log_compiles", True)
@@ -45,12 +45,8 @@ if __name__ == "__main__":
   parser.add_argument("--print_every", type=int, default=100)
 
   # Arguments for development:
-  parser.add_argument("--no_jit", action="store_true")
-  parser.add_argument("--no_update_jit", action="store_true")
-  parser.add_argument("--no_eval_jit", action="store_true")
   parser.add_argument("--truncate_to", type=int, default=None)
   parser.add_argument("--new_train", action="store_true")
-  # parser.add_argument("--skip_final", action="store_true")
   parser.add_argument("--epochs", type=int)
   parser.add_argument("--seed", type=int)
   parser.add_argument("--batch_size", type=int)
@@ -71,9 +67,6 @@ if __name__ == "__main__":
   if args.batch_size:
     hyper_params["batch_size"] = args.batch_size
   hyper_params["truncate_to"] = args.truncate_to
-  hyper_params["no_jit"] = args.no_jit
-  hyper_params["no_update_jit"] = args.no_update_jit
-  hyper_params["no_eval_jit"] = args.no_eval_jit
 
   # network parameters
   net_params = config["net_params"]
@@ -100,27 +93,24 @@ if __name__ == "__main__":
     return padded_size
 
   rng = jax.random.PRNGKey(hyper_params["seed"])
-  '''
-  rng, subkey = jax.random.split(rng)
-  trainloader = DataLoader(
-      np.asarray(train, dtype=object),
+  # trainloader = functools.partial(flat_data_loader,
+  # train, hyper_params["batch_size"], padding_strategy)
+  trainloader = flat_data_loader(
+      train,
       hyper_params["batch_size"],
-      rng=subkey, padding_strategy=padding_strategy)
-  '''
-  trainloader = functools.partial(flat_data_loader2,
-                                  train, hyper_params["batch_size"], padding_strategy)
-  valloader = DataLoader(
-      np.asarray(
-          val,
-          dtype=object),
+      padding_strategy,
+      None)
+  valloader = flat_data_loader(
+      val,
       hyper_params["batch_size"],
-      rng=None, padding_strategy=padding_strategy)
+      padding_strategy,
+      None)
 
-  # Test loader shares same padding strategy for speed. All counts are collected
-  # before test eval
-  testloader = DataLoader(
-    np.asarray(test, dtype=object), hyper_params["batch_size"], padding_strategy=padding_strategy)
-
+  testloader = flat_data_loader(
+      test,
+      hyper_params["batch_size"],
+      padding_strategy,
+      None)
   # ============= Model, Train and Eval functions =============
 
   net_fn = gnn_model(net_params=net_params)
@@ -137,24 +127,17 @@ if __name__ == "__main__":
     functools.partial(compute_loss, net, is_training=True), has_aux=True)
 
   if args.new_train:
-    train_batch_fn = functools.partial(
-        train_batch, train_loss_and_grad_fn, opt_update)
-    if not hyper_params["no_jit"]:
-      train_batch_fn = jax.jit(train_batch_fn)
+    train_batch_fn = jax.jit(functools.partial(
+        train_batch, train_loss_and_grad_fn, opt_update))
     train_epoch_fn = functools.partial(train_epoch_new, train_batch_fn)
   else:
-    if not hyper_params["no_jit"]:
-      train_loss_and_grad_fn = jax.jit(train_loss_and_grad_fn)
-    if not hyper_params["no_update_jit"]:
-      opt_update = jax.jit(opt_update)
+    train_loss_and_grad_fn = jax.jit(train_loss_and_grad_fn)
     train_epoch_fn = functools.partial(
-        train_epoch, train_loss_and_grad_fn, opt_update, optax.apply_updates)
+        train_epoch, jax.jit(train_loss_and_grad_fn), jax.jit(opt_update), jax.jit(optax.apply_updates))
 
   # Rng only used for dropout, not needed for eval
-  eval_loss_fn = functools.partial(
-      compute_loss, net, rng=None, is_training=False)
-  if not hyper_params["no_eval_jit"]:
-    eval_loss_fn = jax.jit(eval_loss_fn)
+  eval_loss_fn = jax.jit(functools.partial(
+      compute_loss, net, rng=None, is_training=False))
 
   # ==================== Training ====================
   if args.wandb:
@@ -229,7 +212,7 @@ if __name__ == "__main__":
       jax.profiler.stop_trace()
 
     # ==================== Final evaluation ====================
-    # We want padded graph sizes from the training loop only
+    # ~We want padded graph sizes from the training loop only~
     padded_graph_sizes_stringified = {
         str(size): count for size,
         count in padded_graph_sizes.items()}

@@ -54,7 +54,7 @@ def train_batch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, params: h
 
 
 def train_epoch_new(train_batch_fn, params: hk.Params, state: hk.State, rng: jax.random.KeyArray,
-                    opt_state: optax.OptState, ds: DataLoader) -> TrainResult:
+                    opt_state: optax.OptState, ds) -> TrainResult:
   """Train for one epoch."""
 
   losses = []
@@ -83,14 +83,12 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
   opt_update_times = []
   opt_apply_times = []
 
-  rng, subkey = jax.random.split(rng)
+  '''rng, subkey = jax.random.split(rng)
   batches = list(dataloader(subkey))
-  del subkey
-  subkeys = jax.random.split(rng, len(batches))
+  del subkey'''
+  subkeys = jax.random.split(rng, len(dataloader))
 
-  dataset_time = time.time()
-
-  for (batch, length), subkey in zip(batches, subkeys):
+  for (batch, length), subkey in zip(dataloader, subkeys):
     # As we've already produced the whole dataset time between iterations is
     # negligible
     batch_start = time.time()
@@ -121,28 +119,12 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
   opt_apply_times = jnp.asarray(opt_apply_times)
   total_batch_times = loss_and_grad_times + opt_update_times + opt_apply_times
 
-  '''sum_time_metrics = {
-      "loss_and_grad_time": float(
-          jnp.sum(loss_and_grad_times)),
-      "opt_update_time": float(
-          jnp.sum(opt_update_times)),
-      "opt_apply_time": float(
-        jnp.sum(opt_apply_times)), "total_batch_time": float(jnp.sum(total_batch_times))}
-  timing_metrics = {
-      "loss_and_grad_times": loss_and_grad_times,
-      "opt_update_times": opt_update_times,
-      "opt_apply_times": opt_apply_times,
-      "total_batch_times": total_batch_times,
-  }'''
   time_metrics = {
       "total_epoch_time_ALT": time.time() -
-      epoch_start_time,
-      "dataset_time": dataset_time -
       epoch_start_time}
   for times, name in zip([loss_and_grad_times, opt_update_times, opt_apply_times, total_batch_times], [
                          "loss_and_grad_times", "opt_update_times", "opt_apply_times", "total_batch_times", "pre_iter_times"]):
     time_metrics[name] = times
-    #time_metrics[name + "_mean"] = float(jnp.mean(times))
     time_metrics[name[:-1]] = float(jnp.sum(times))
 
   metrics = {"loss": float(loss)} | time_metrics
