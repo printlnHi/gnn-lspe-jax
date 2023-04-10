@@ -14,7 +14,7 @@ import optax
 import datasets
 import wandb
 from nets.zinc import gnn_model
-from train_zinc import train_epoch, evaluate_epoch, compute_loss, train_batch, train_epoch_new
+from train_zinc import train_epoch, evaluate_epoch, compute_loss
 from utils import create_optimizer, DataLoader, power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader
 
 if __name__ == "__main__":
@@ -46,7 +46,6 @@ if __name__ == "__main__":
 
   # Arguments for development:
   parser.add_argument("--truncate_to", type=int, default=None)
-  parser.add_argument("--new_train", action="store_true")
   parser.add_argument("--epochs", type=int)
   parser.add_argument("--seed", type=int)
   parser.add_argument("--batch_size", type=int)
@@ -126,14 +125,8 @@ if __name__ == "__main__":
   train_loss_and_grad_fn = jax.value_and_grad(
     functools.partial(compute_loss, net, is_training=True), has_aux=True)
 
-  if args.new_train:
-    train_batch_fn = jax.jit(functools.partial(
-        train_batch, train_loss_and_grad_fn, opt_update))
-    train_epoch_fn = functools.partial(train_epoch_new, train_batch_fn)
-  else:
-    train_loss_and_grad_fn = jax.jit(train_loss_and_grad_fn)
-    train_epoch_fn = functools.partial(
-        train_epoch, jax.jit(train_loss_and_grad_fn), jax.jit(opt_update), jax.jit(optax.apply_updates))
+  train_epoch_fn = functools.partial(
+      train_epoch, jax.jit(train_loss_and_grad_fn), jax.jit(opt_update), jax.jit(optax.apply_updates))
 
   # Rng only used for dropout, not needed for eval
   eval_loss_fn = jax.jit(functools.partial(
