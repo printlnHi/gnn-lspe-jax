@@ -109,11 +109,12 @@ def create_optimizer(
   # TODO: understand what params "weight decay" is
   steps_per_epoch = (
       10000 + hyper_params["batch_size"] - 1) // hyper_params["batch_size"]
+  print("steps per epoch", steps_per_epoch)
   lr = optax.exponential_decay(
       init_value=hyper_params["init_lr"],
-      transition_steps=150 * steps_per_epoch,
+      transition_steps=100 * steps_per_epoch,
       decay_rate=hyper_params["lr_reduce_factor"],
-      end_value=hyper_params["min_lr"])
+      end_value=hyper_params["init_lr"] * 1e-2)
   # lr =hyper_params["init_lr"]
   return optax.adam(learning_rate=lr)
 
