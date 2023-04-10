@@ -54,12 +54,13 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
   opt_update_times = []
   opt_apply_times = []
 
-  '''rng, subkey = jax.random.split(rng)
+  rng, subkey = jax.random.split(rng)
   batches = list(dataloader(subkey))
-  del subkey'''
-  subkeys = jax.random.split(rng, len(dataloader))
+  del subkey
+  subkeys = jax.random.split(rng, len(batches))
+  dataset_time = time.time() - epoch_start_time
 
-  for (batch, length), subkey in zip(dataloader, subkeys):
+  for (batch, length), subkey in zip(batches, subkeys):
     # As we've already produced the whole dataset time between iterations is
     # negligible
     batch_start = time.time()
@@ -92,7 +93,8 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
 
   time_metrics = {
       "total_epoch_time_ALT": time.time() -
-      epoch_start_time}
+      epoch_start_time,
+      "dataset_time": dataset_time}
   for times, name in zip([loss_and_grad_times, opt_update_times, opt_apply_times, total_batch_times], [
                          "loss_and_grad_times", "opt_update_times", "opt_apply_times", "total_batch_times", "pre_iter_times"]):
     time_metrics[name] = times

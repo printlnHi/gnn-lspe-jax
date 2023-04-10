@@ -123,7 +123,7 @@ def __get__unpadded_batch(batch):
   batch_graphs = [x[0] for x in batch]
   batch_labels = [x[1] for x in batch]
   labelled_graph = (
-      jraph.batch(batch_graphs),
+      jraph.batch_np(batch_graphs),
       jnp.concatenate(batch_labels, axis=0))
   return labelled_graph, len(batch)
 

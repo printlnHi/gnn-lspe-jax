@@ -92,13 +92,8 @@ if __name__ == "__main__":
     return padded_size
 
   rng = jax.random.PRNGKey(hyper_params["seed"])
-  # trainloader = functools.partial(flat_data_loader,
-  # train, hyper_params["batch_size"], padding_strategy)
-  trainloader = flat_data_loader(
-      train,
-      hyper_params["batch_size"],
-      padding_strategy,
-      None)
+  trainloader = functools.partial(flat_data_loader,
+                                  train, hyper_params["batch_size"], padding_strategy)
   valloader = flat_data_loader(
       val,
       hyper_params["batch_size"],
