@@ -133,8 +133,11 @@ def flat_data_loader(dataset, batch_size, padding_strategy, rng):
   n = len(dataset)
   length = (n + batch_size - 1) // batch_size
   if rng is not None:
-    batch_indicies = jax.random.permutation(rng, n)
-    dataset = [dataset[i] for i in batch_indicies]
+
+    '''batch_indicies = jax.random.permutation(rng, n)
+    dataset = [dataset[i] for i in batch_indicies]'''
+    rng = np.random.default_rng(int(rng[0]))
+    rng.shuffle(dataset)
   else:
     batch_indicies = jnp.arange(n)
   shuffle_time = time.time()

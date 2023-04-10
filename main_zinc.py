@@ -192,9 +192,8 @@ if __name__ == "__main__":
 
       if args.wandb:
         train_metrics = {'train ' + k: v for k, v in train_metrics.items()}
-        val_metrics = {'val ' + k: v for k, v in val_metrics.items()}
         wandb.log({"epoch": epoch} | timing_metrics |
-                  train_metrics | val_metrics)
+                  train_metrics | val_metrics | {'val ' + k: v for k, v in val_metrics.items()})
 
     if args.profile:
       jax.profiler.stop_trace()
