@@ -130,14 +130,13 @@ def gnn_model(net_params: Dict[str, Any],
     h = jnp.concatenate([h, aux_zeros])
     graph_indicies = jnp.concatenate([graph_indicies, aux_ids])'''
     if readout == 'sum':
-      hg = jax.ops.segment_sum(h, graph_indicies, num_segments=num_graphs)
+      hg = jraph.segment_sum(h, graph_indicies, num_segments=num_graphs)
     elif readout == 'max':
       # TODO: Should consider using aux value of -inf instead of 0 for max
-      hg = jax.ops.segment_max(h, graph_indicies, num_segments=num_graphs)
+      hg = jraph.segment_max(h, graph_indicies, num_segments=num_graphs)
     else:
       # mean
-      hg = jax.ops.segment_sum(h, graph_indicies, num_segments=num_graphs)
-      hg /= jnp.expand_dims(n_node, axis=1).astype(jnp.float32)
+      hg = jraph.segment_mean(h, graph_indicies, num_segments=num_graphs)
     hg = jnp.nan_to_num(hg)
     HaikuDebug("hg", enable=debug)(hg)
     mlp_result = mlp_readout(hg, input_dim=out_dim, output_dim=1)
