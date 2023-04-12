@@ -50,13 +50,11 @@ def gnn_model(net_params: Dict[str, Any],
     if is_training:
       h = hk.dropout(hk.next_rng_key(), in_feat_dropout, h)
 
-    if pe_init in ['rand_walk', 'lap_pe']:
-      hk.Linear(hidden_dim)  # embedding_p to be applied
-      raise NotImplementedError("Don't have a concept of node features p yet")
-
-    if pe_init == 'lap_pe':
-      # h = h + p
-      raise NotImplementedError("Don't have a concept of node features p yet")
+    if pe_init == "lap_pe":
+      # Combine the node features and the Laplacian PE in the embedding space
+      h += hk.Linear(hidden_dim)(nodes['pe'])
+    elif pe_init == "rand_walk":
+      raise NotImplementedError("Random walk PE structure")
 
     if edge_feat:
       embedding_e = hk.Embed(vocab_size=num_bond_type, embed_dim=hidden_dim)

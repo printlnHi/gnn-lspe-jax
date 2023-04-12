@@ -75,7 +75,6 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
     params = opt_apply_updates(params, updates)
     opt_end = time.time()
 
-    #print("mlp/~/linear_0: ", params['mlp/~/linear_0']['w'])
     losses.append(loss)
     lengths.append(length)
     loss_and_grad_times.append(loss_end - batch_start)

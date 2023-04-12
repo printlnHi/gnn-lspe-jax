@@ -19,6 +19,23 @@ PaddingScheme = Callable[[GraphsSize], GraphsSize]
 # TODO: Consider splitting this file out
 
 
+def add_lapPE(graph, pos_enc_dim):
+  nodes, edges, senders, receivers, globals, n_node, n_edge = graph
+  dim = nodes['feat'].shape[0]
+  A = jnp.zeros((dim, dim)).at[senders, receivers].set(1)
+  in_degrees = jnp.bincount(senders, minlength=dim)
+  N = jnp.diag(in_degrees ** -0.5)
+  D = jnp.eye(dim)
+  L = D - N @ A @ N
+  # TODO: Why does Dwivedi normalise with indegree matrix?
+  eigValues, eigVectors = jnp.linalg.eig(L)
+  idx = eigValues.argsort()
+  eigValues, eigVectors = eigValues[idx], eigVectors[:, idx]
+  # All vectors should be real, should I check this?
+  pe = eigVectors[:, 1:pos_enc_dim + 1]
+  return graph._replace(nodes=nodes | {'pe': pe, "eigvec": pe})
+
+
 def _next_power_of_two(x: int) -> int:
   """Computes the nearest power of two greater than or equal to  x for padding.
   """

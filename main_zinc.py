@@ -44,13 +44,16 @@ if __name__ == "__main__":
   parser.add_argument("--wandb_run_name", type=str, default="proto_zinc")
   parser.add_argument("--print_every", type=int, default=100)
 
-  # Arguments for development:
-  parser.add_argument("--truncate_to", type=int, default=None)
-  parser.add_argument("--epochs", type=int)
+  # Hyperparameters
   parser.add_argument("--seed", type=int)
   parser.add_argument("--batch_size", type=int)
-  parser.add_argument("--profile", action="store_true")
+  parser.add_argument("--epochs", type=int)
   parser.add_argument("--transition_epochs", type=int, default=150)
+  # Network parameters
+  parser.add_argument("--pe_init", type=str)
+  # Development parameters
+  parser.add_argument("--truncate_to", type=int, default=None)
+  parser.add_argument("--profile", action="store_true")
   #parser.add_argument("--padding_scheme", type=str, default="power_of_two")
 
   args = parser.parse_args()
@@ -66,14 +69,26 @@ if __name__ == "__main__":
     hyper_params["seed"] = args.seed
   if args.batch_size:
     hyper_params["batch_size"] = args.batch_size
-  hyper_params["truncate_to"] = args.truncate_to
+  if args.pe_init:
+    hyper_params["pe_init"] = args.pe_init
   hyper_params["transition_epochs"] = args.transition_epochs
+
+  # development parameters
+  hyper_params["truncate_to"] = args.truncate_to
 
   # network parameters
   net_params = config["net_params"]
+  if args.pe_init:
+    net_params["pe_init"] = args.pe_init
 
   # ==================== Data ====================
   dataset = datasets.zinc()
+
+  if net_params["pe_init"] == "lap_pe":
+    print("adding lap PE ...", end=" ", flush=True)
+    dataset.add_lap_PEs(net_params["pos_enc_dim"])
+    print("done")
+
   net_params["num_atom_type"] = dataset.num_atom_type
   net_params["num_bond_type"] = dataset.num_bond_type
   train, val, test = dataset.train, dataset.val, dataset.test
@@ -195,7 +210,7 @@ if __name__ == "__main__":
       if args.wandb:
         train_metrics = {'train ' + k: v for k, v in train_metrics.items()}
         wandb.log({"epoch": epoch} | timing_metrics |
-                  train_metrics | val_metrics | {'val ' + k: v for k, v in val_metrics.items()})
+                  train_metrics | {'val ' + k: v for k, v in val_metrics.items()})
 
     if args.profile:
       jax.profiler.stop_trace()
