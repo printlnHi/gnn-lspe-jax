@@ -44,7 +44,7 @@ def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.Stat
   return loss, state
 
 
-def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply_updates, params: hk.Params, state: hk.State, rng: jax.random.KeyArray,
+def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply_updates, pe_init, params: hk.Params, state: hk.State, rng: jax.random.KeyArray,
                 opt_state: optax.OptState, dataloader) -> TrainResult:
   """Train for one epoch."""
   epoch_start_time = time.time()
@@ -57,15 +57,21 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
   rng, subkey = jax.random.split(rng)
   batches = list(dataloader(subkey))
   del subkey
-  subkeys = jax.random.split(rng, len(batches))
+  subkeys = jax.random.split(rng, 2 * len(batches)).reshape(-1, 2, 2)
   dataset_time = time.time() - epoch_start_time
 
   for (batch, length), subkey in zip(batches, subkeys):
     # As we've already produced the whole dataset time between iterations is
     # negligible
+    if pe_init == "lap_pe":
+
+      flip = jax.random.bernoulli(
+          subkey[0], shape=batch[0].nodes['pe'].shape) * 2 - 1
+      batch[0].nodes['pe'] = batch[0].nodes['pe'] * flip
+
     batch_start = time.time()
     (loss, state), grads = loss_and_grad_fn(
-      params, state, batch, subkey)
+      params, state, batch, subkey[1])
     loss_end = time.time()
 
     updates, opt_state = opt_update(

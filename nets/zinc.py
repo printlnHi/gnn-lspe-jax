@@ -53,6 +53,7 @@ def gnn_model(net_params: Dict[str, Any],
     if pe_init == "lap_pe":
       # Combine the node features and the Laplacian PE in the embedding space
       h += hk.Linear(hidden_dim)(nodes['pe'])
+      pass
     elif pe_init == "rand_walk":
       raise NotImplementedError("Random walk PE structure")
 
@@ -62,22 +63,6 @@ def gnn_model(net_params: Dict[str, Any],
       embedding_e = hk.Linear(hidden_dim)
       edges = {'feat': jnp.ones([n_edge, 1])}
     e = embedding_e(edges['feat'])
-
-    if pe_init == 'rand_walk':
-      # LSPE
-      raise NotImplementedError(
-        "Random walk PE nor GatedGCNLSPELayer implemented yet")
-    else:
-      # NoPE or LapPE
-      '''      layers = [
-          GatedGCNLayer(
-              hidden_dim,
-              residual=residual,
-              dropout=dropout) for _ in range(
-              n_layers - 1)]
-      layers.append(GatedGCNLayer(out_dim, residual=residual, dropout=dropout))
-      layers = np.array(layers)
-      '''
 
     # TODO: Will have to update this to propogate p features
     nodes = nodes | {'feat': h}
@@ -91,19 +76,22 @@ def gnn_model(net_params: Dict[str, Any],
         n_edge=n_edge,
         globals=globals)
 
-    '''for layer in layers:
-      updated_graph = layer(updated_graph, is_training=is_training)'''
-    for _ in range(n_layers - 1):
-      updated_graph = GatedGCNLayer(output_dim=hidden_dim, residual=residual, dropout=dropout,
-                                    )(updated_graph, is_training=is_training)
-    updated_graph = GatedGCNLayer(
-        output_dim=out_dim,
-        residual=residual,
-        dropout=dropout)(
-        updated_graph,
-        is_training=is_training)
+    if pe_init == 'rand_walk':
+      # LSPE
+      raise NotImplementedError(
+        "Random walk PE nor GatedGCNLSPELayer implemented yet")
+    else:
+      for _ in range(n_layers - 1):
+        updated_graph = GatedGCNLayer(output_dim=hidden_dim, residual=residual, dropout=dropout,
+                                      )(updated_graph, is_training=is_training)
+      updated_graph = GatedGCNLayer(
+          output_dim=out_dim,
+          residual=residual,
+          dropout=dropout)(
+          updated_graph,
+          is_training=is_training)
 
-    nodes, edges, _, _, _, _, _ = updated_graph
+      nodes, edges, _, _, _, _, _ = updated_graph
     HaikuDebug("update_graph", enable=debug)(updated_graph)
     h = nodes['feat']
 

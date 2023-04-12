@@ -18,7 +18,7 @@ from train_zinc import train_epoch, evaluate_epoch, compute_loss
 from utils import create_optimizer, DataLoader, power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader
 
 if __name__ == "__main__":
-  #config.update("jax_log_compiles", True)
+  # config.update("jax_log_compiles", True)
   '''
   import logging
   logging.getLogger("jax").setLevel(logging.DEBUG)
@@ -54,7 +54,7 @@ if __name__ == "__main__":
   # Development parameters
   parser.add_argument("--truncate_to", type=int, default=None)
   parser.add_argument("--profile", action="store_true")
-  #parser.add_argument("--padding_scheme", type=str, default="power_of_two")
+  # parser.add_argument("--padding_scheme", type=str, default="power_of_two")
 
   args = parser.parse_args()
 
@@ -138,7 +138,7 @@ if __name__ == "__main__":
     functools.partial(compute_loss, net, is_training=True), has_aux=True)
 
   train_epoch_fn = functools.partial(
-      train_epoch, jax.jit(train_loss_and_grad_fn), jax.jit(opt_update), jax.jit(optax.apply_updates))
+      train_epoch, jax.jit(train_loss_and_grad_fn), jax.jit(opt_update), jax.jit(optax.apply_updates), net_params["pe_init"])
 
   # Rng only used for dropout, not needed for eval
   eval_loss_fn = jax.jit(functools.partial(

@@ -16,4 +16,4 @@ dependencies:
    - dm-haiku
    - dgl==0.9.1 ##DGL 1 breaks ZINC dataset
    - optax
-   - tdqm
+   - tqdm
