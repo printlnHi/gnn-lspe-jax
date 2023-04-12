@@ -22,13 +22,14 @@ PaddingScheme = Callable[[GraphsSize], GraphsSize]
 def add_lapPE(graph, pos_enc_dim):
   nodes, edges, senders, receivers, globals, n_node, n_edge = graph
   dim = nodes['feat'].shape[0]
-  A = jnp.zeros((dim, dim)).at[senders, receivers].set(1)
-  in_degrees = jnp.bincount(senders, minlength=dim)
-  N = jnp.diag(in_degrees ** -0.5)
-  D = jnp.eye(dim)
+  A = np.zeros((dim, dim))
+  A[senders, receivers] = 1
+  in_degrees = np.bincount(senders, minlength=dim)
+  N = np.diag(in_degrees ** -0.5)
+  D = np.eye(dim)
   L = D - N @ A @ N
   # TODO: Why does Dwivedi normalise with indegree matrix?
-  eigValues, eigVectors = jnp.linalg.eig(L)
+  eigValues, eigVectors = np.linalg.eig(L)
   idx = eigValues.argsort()
   eigValues, eigVectors = eigValues[idx], eigVectors[:, idx]
   # All vectors should be real, should I check this?
