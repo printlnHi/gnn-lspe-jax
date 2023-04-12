@@ -124,11 +124,6 @@ def gnn_model(net_params: Dict[str, Any],
         n_node,
         total_repeat_length=sum_n_node)
     HaikuDebug("graph_indicies", enable=debug)(graph_indicies)
-    '''# Set NaNs to 0 to avoid NaNs in the loss.
-    aux_zeros = jnp.zeros((num_graphs, hidden_dim))
-    aux_ids = jnp.arange(num_graphs)
-    h = jnp.concatenate([h, aux_zeros])
-    graph_indicies = jnp.concatenate([graph_indicies, aux_ids])'''
     if readout == 'sum':
       hg = jraph.segment_sum(h, graph_indicies, num_segments=num_graphs)
     elif readout == 'max':
