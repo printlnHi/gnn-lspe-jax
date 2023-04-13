@@ -83,14 +83,14 @@ if __name__ == "__main__":
 
   # ==================== Data ====================
   dataset = datasets.zinc()
+  net_params["num_atom_type"] = dataset.num_atom_type
+  net_params["num_bond_type"] = dataset.num_bond_type
 
   if net_params["pe_init"] == "lap_pe":
     print("adding lap PE ...", end=" ", flush=True)
     dataset.add_lap_PEs(net_params["pos_enc_dim"])
     print("done")
 
-  net_params["num_atom_type"] = dataset.num_atom_type
-  net_params["num_bond_type"] = dataset.num_bond_type
   train, val, test = dataset.train, dataset.val, dataset.test
   if hyper_params["truncate_to"] is not None:
     train = train[:hyper_params["truncate_to"]]
@@ -223,12 +223,11 @@ if __name__ == "__main__":
     graph_sizes_seen = len(padded_graph_sizes)
 
     if args.truncate_to:
-      valloader = DataLoader(
-          np.asarray(
-              dataset.val,
-              dtype=object),
-          1,
-          rng=None, padding_strategy=padding_strategy)
+      valloader = flat_data_loader(
+          dataset.val,
+          hyper_params["batch_size"],
+          padding_strategy,
+          None)
       final_val_metrics = evaluate_epoch(
           eval_loss_fn, params, state, valloader)
     elif val_metrics is None:
@@ -237,6 +236,7 @@ if __name__ == "__main__":
     else:
       final_val_metrics = val_metrics
 
+    print("ABOUT TO EVALUATE TEST")
     final_test_metrics = evaluate_epoch(
         eval_loss_fn, params, state, testloader)
 
