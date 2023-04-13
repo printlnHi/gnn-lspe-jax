@@ -33,6 +33,7 @@ def add_lapPE(graph, pos_enc_dim):
   idx = eigValues.argsort()
   eigValues, eigVectors = eigValues[idx], eigVectors[:, idx]
   # All vectors should be real, should I check this?
+  eigVectors = np.real(eigVectors)
   pe = eigVectors[:, 1:pos_enc_dim + 1]
   return graph._replace(nodes=nodes | {'pe': pe, "eigvec": pe})
 
@@ -49,7 +50,6 @@ def add_jnp_lapPE(graph, pos_enc_dim):
   eigValues, eigVectors = jnp.linalg.eig(L)
   idx = eigValues.argsort()
   eigValues, eigVectors = eigValues[idx], eigVectors[:, idx]
-  # All vectors should be real, should I check this?
   eigVectors = jnp.real(eigVectors)
   pe = eigVectors[:, 1:pos_enc_dim + 1]
   return graph._replace(nodes=nodes | {'pe': pe, "eigvec": pe})

@@ -8,7 +8,7 @@ import jraph
 
 # TODO: Should I rename to not be cased like a class?
 # from layers.GatedGCNLayer import GatedGCNLayer
-#from layers.GatedGCNLayer_fn import GatedGCNLayer
+# from layers.GatedGCNLayer_fn import GatedGCNLayer
 from layers.GatedGCNLayer_hk import GatedGCNLayer
 from layers.mlp_readout_layer import mlp_readout
 from type_aliases import GraphClassifierFn
