@@ -102,7 +102,6 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
       "dataset_time": dataset_time}
   for times, name in zip([loss_and_grad_times, opt_update_times, opt_apply_times, total_batch_times], [
                          "loss_and_grad_times", "opt_update_times", "opt_apply_times", "total_batch_times", "pre_iter_times"]):
-    time_metrics[name] = times
     time_metrics[name[:-1]] = float(jnp.sum(times))
 
   metrics = {"loss": float(loss)} | time_metrics
