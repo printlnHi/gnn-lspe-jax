@@ -66,7 +66,7 @@ def _next_power_of_two(x: int) -> int:
 
 def get_GraphsSize(graph: jraph.GraphsTuple) -> GraphsSize:
   """Returns the triple representing the size of the GraphsTuple: (n_nodes, n_edges, n_graphs)"""
-  return GraphsSize((jnp.sum(graph.n_node).item(), jnp.sum(
+  return GraphsSize((np.sum(graph.n_node).item(), np.sum(
     graph.n_edge).item(), graph.n_node.shape[0]))
 
 
@@ -134,7 +134,7 @@ def pad_labelled_graph(labelled_graph: LabelledGraph,
   padded_graphs_tuple = jraph.pad_with_graphs(
     graphs_tuple, n_nodes, n_edges, n_graphs)
   label_padding_shape = (n_graphs - original_size[2], ) + label.shape[1:]
-  padded_label = jnp.concatenate([label, jnp.zeros(label_padding_shape)])
+  padded_label = np.concatenate([label, np.zeros(label_padding_shape)])
 
   return padded_graphs_tuple, padded_label
 
@@ -155,35 +155,32 @@ def create_optimizer(
   return optax.adam(learning_rate=lr)
 
 
-def __get__unpadded_batch(batch):
-  batch_graphs = [x[0] for x in batch]
-  batch_labels = [x[1] for x in batch]
-  labelled_graph = (
-      jraph.batch_np(batch_graphs),
-      jnp.concatenate(batch_labels, axis=0))
-  return labelled_graph, len(batch)
-
-
 def flat_data_loader(dataset, batch_size, padding_strategy, rng):
   start_time = time.time()
   n = len(dataset)
   length = (n + batch_size - 1) // batch_size
   if rng is not None:
-
-    '''batch_indicies = jax.random.permutation(rng, n)
-    dataset = [dataset[i] for i in batch_indicies]'''
     rng = np.random.default_rng(int(rng[0]))
     rng.shuffle(dataset)
-  else:
-    batch_indicies = jnp.arange(n)
   shuffle_time = time.time()
-  unpadded = [
-      __get__unpadded_batch(
-          dataset[i * batch_size:(i + 1) * batch_size]
-      ) for i in range(length)]
+
+  graphs, labels = zip(*dataset)
+  graphs = [jraph.batch_np(graphs[i * batch_size:(i + 1) * batch_size])
+            for i in range(length)]
+  labels = [np.concatenate(
+      labels[i * batch_size:(i + 1) * batch_size], axis=0) for i in range(length)]
+  lengths = [
+    batch_size if i < length -
+    1 else n -
+    i *
+      batch_size for i in range(length)]
   unpadded_time = time.time()
-  batches = [(pad_labelled_graph(x[0], padding_strategy), x[1])
-             for x in unpadded]
+
+  labelled_graphs = [
+      pad_labelled_graph(
+          (graph, label), padding_strategy) for graph, label in zip(
+          graphs, labels)]
+  batches = list(zip(labelled_graphs, lengths))
   batches_time = time.time()
   print(f"total time: {batches_time - start_time} = shuffle {shuffle_time-start_time} + unpadded: {unpadded_time - shuffle_time} + batches: {batches_time - unpadded_time}")
   return batches
