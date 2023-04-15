@@ -156,7 +156,7 @@ if __name__ == "__main__":
     run = wandb.init(
         project=args.wandb_project,
         entity=args.wandb_entity,
-        name=args.wandb_run_name, config=hyper_params, tags=tags)
+        name=args.wandb_run_name, config=hyper_params | net_params, tags=tags)
 
   try:
 
