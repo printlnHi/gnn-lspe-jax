@@ -9,16 +9,18 @@ import jraph
 from utils import HaikuDebug
 
 
-class GatedGCNLayer(hk.Module):
+class GatedGCNLSPELayer(hk.Module):
 
   def __init__(self, output_dim, weight_on_edges=True,
-               residual=True, dropout=0.0, debug=False, name: Optional[str] = None):
+               residual=True, dropout=0.0, use_lapeig_loss=False, debug=False, name: Optional[str] = None):
     super().__init__(name=name)
     self.output_dim = output_dim
     self.weight_on_edges = weight_on_edges
     self.residual = residual
     self.dropout = dropout
+    self.use_lapeig_loss = use_lapeig_loss
     self.debug = debug
+    assert(not use_lapeig_loss)
 
   def __call__(self, graph: jraph.GraphsTuple,
                is_training=True) -> jraph.GraphsTuple:
@@ -28,14 +30,15 @@ class GatedGCNLayer(hk.Module):
     dropout = self.dropout
     debug = self.debug
 
-    """Applies a GatedGCN layer."""
+    """Applies a GatedGCN-LSPE layer."""
 
-    # TODO: find another paper perhaps, list paper
     A = hk.Linear(output_dim, name="i_multiplication_edge_logits")
     B = hk.Linear(output_dim, name="j_multiplication_edge_logits")
     C = hk.Linear(output_dim, name="edge_multiplication_edge_logits")
     U = hk.Linear(output_dim, name="i_multiplication_node")
     V = hk.Linear(output_dim, name="j_multiplication_node")
+    X = hk.Linear(output_dim, name="i_multiplication_positional")
+    Y = hk.Linear(output_dim, name="j_multiplication_positional")
     batch_norm_edge = hk.BatchNorm(
         create_scale=True,
         create_offset=True,
@@ -48,12 +51,11 @@ class GatedGCNLayer(hk.Module):
 
     nodes, edges, receivers, senders, _, _, _ = graph
     h = nodes['feat']
+    p = nodes['pos']
     e = edges['feat']
-    # TODO: Do we only care about undirected graph
     i = senders
     j = receivers
 
-    # Equivalent to the sum of n_node, but statically known.
     try:
       sum_n_node = h.shape[0]
     except IndexError:
@@ -90,29 +92,39 @@ class GatedGCNLayer(hk.Module):
     else:
       w_sigma = jax.nn.sigmoid(eta)
 
+    # TODO: Turn to jraph
     w_sigma_sum = jax.ops.segment_sum(
         w_sigma, segment_ids=i, num_segments=sum_n_node) + 1e-6
 
-    # TODO: check this is Hadamard product
-    unattnd_messages = V(h[j]) * w_sigma
+    unattnd_messages = V(jnp.concatenate([h[j], p[j]], axis=1)) * w_sigma
     agg_unattnd_messages = jax.ops.segment_sum(
-        unattnd_messages, i, num_segments=sum_n_node)  # TODO: i or j?
-    node_layer_features = U(h) + agg_unattnd_messages / w_sigma_sum
+        unattnd_messages, i, num_segments=sum_n_node)
+    node_layer_features = U(jnp.concatenate(
+      [h, p], axis=1)) + agg_unattnd_messages / w_sigma_sum
     HaikuDebug("node_before", enable=debug)(node_layer_features)
     node_layer_features = jax.nn.relu(
       batch_norm_node(node_layer_features, is_training))
     HaikuDebug("node_layer_features", enable=debug)(node_layer_features)
 
+    unattnd_messages = Y(p[j]) * w_sigma
+    agg_unattnd_messages = jax.ops.segment_sum(
+        unattnd_messages, i, num_segments=sum_n_node)
+    pos_layer_features = jax.nn.tanh(X(p) + agg_unattnd_messages / w_sigma_sum)
+    HaikuDebug("pos_layer_features", enable=debug)(pos_layer_features)
+
     if residual:
       h = h + node_layer_features
+      p = p + pos_layer_features
     else:
       h = node_layer_features
+      p = pos_layer_features
 
     if is_training:
       h = hk.dropout(hk.next_rng_key(), dropout, h)
       e = hk.dropout(hk.next_rng_key(), dropout, e)
+      p = hk.dropout(hk.next_rng_key(), dropout, p)
 
-    nodes = dict(nodes | {'feat': h})
+    nodes = dict(nodes | {'feat': h} | {'pos': p})
     edges = dict(edges | {'feat': e})
     output = graph._replace(nodes=nodes, edges=edges)
     HaikuDebug("output", enable=debug)(output)

@@ -7,9 +7,8 @@ import numpy as np
 import jraph
 
 # TODO: Should I rename to not be cased like a class?
-# from layers.GatedGCNLayer import GatedGCNLayer
-# from layers.GatedGCNLayer_fn import GatedGCNLayer
 from layers.GatedGCNLayer_hk import GatedGCNLayer
+from layers.GatedGCNLSPELayer import GatedGCNLSPELayer
 from layers.mlp_readout_layer import mlp_readout
 from type_aliases import GraphClassifierFn
 from utils import HaikuDebug
@@ -52,10 +51,11 @@ def gnn_model(net_params: Dict[str, Any],
 
     if pe_init == "lap_pe":
       # Combine the node features and the Laplacian PE in the embedding space
-      h += hk.Linear(hidden_dim)(nodes['pe'])
+      h += hk.Linear(hidden_dim, name="pe_embedding")(nodes['pe'])
       pass
     elif pe_init == "rand_walk":
-      raise NotImplementedError("Random walk PE structure")
+      p = hk.Linear(hidden_dim, name="pe_embedding")(nodes['pe'])
+      nodes = nodes | {'pos': p}
 
     if edge_feat:
       embedding_e = hk.Embed(vocab_size=num_bond_type, embed_dim=hidden_dim)
@@ -64,7 +64,6 @@ def gnn_model(net_params: Dict[str, Any],
       edges = {'feat': jnp.ones([n_edge, 1])}
     e = embedding_e(edges['feat'])
 
-    # TODO: Will have to update this to propogate p features
     nodes = nodes | {'feat': h}
     edges = edges | {'feat': e}
     updated_graph = jraph.GraphsTuple(
@@ -77,9 +76,15 @@ def gnn_model(net_params: Dict[str, Any],
         globals=globals)
 
     if pe_init == 'rand_walk':
-      # LSPE
-      raise NotImplementedError(
-        "Random walk PE nor GatedGCNLSPELayer implemented yet")
+      for _ in range(n_layers - 1):
+        updated_graph = GatedGCNLSPELayer(output_dim=hidden_dim, residual=residual, dropout=dropout,
+                                          )(updated_graph, is_training=is_training)
+      updated_graph = GatedGCNLSPELayer(
+          output_dim=out_dim,
+          residual=residual,
+          dropout=dropout)(
+          updated_graph,
+          is_training=is_training)
     else:
       for _ in range(n_layers - 1):
         updated_graph = GatedGCNLayer(output_dim=hidden_dim, residual=residual, dropout=dropout,
@@ -92,23 +97,24 @@ def gnn_model(net_params: Dict[str, Any],
           is_training=is_training)
 
       nodes, edges, _, _, _, _, _ = updated_graph
-    HaikuDebug("update_graph", enable=debug)(updated_graph)
+
+    HaikuDebug("updated_graph", enable=debug)(updated_graph)
     h = nodes['feat']
 
-    if pe_init == 'rand_walk':
-      p_out = hk.Linear(pos_enc_dim)
-      Whp = hk.Linear(out_dim)
-      '''
-            p = self.p_out(p)
-            ...'''
-      raise NotImplementedError("Don't have a concept of node features p yet")
-
-    # readout
     graph_indicies = jnp.repeat(
         jnp.arange(
             n_node.shape[0]),
         n_node,
         total_repeat_length=sum_n_node)
+
+    if pe_init == 'rand_walk':
+      p = nodes['pos']
+      p = hk.Linear(pos_enc_dim, name="pe_out")(p)
+      p = jraph.segment_normalize(p, graph_indicies, num_segments=num_graphs)
+      h = hk.Linear(out_dim, name="Whp")(jnp.concatenate([h, p], axis=1))
+      # TODO: Make P accessible to loss function
+
+    # readout
     HaikuDebug("graph_indicies", enable=debug)(graph_indicies)
     if readout == 'sum':
       hg = jraph.segment_sum(h, graph_indicies, num_segments=num_graphs)

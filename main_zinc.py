@@ -15,7 +15,7 @@ import datasets
 import wandb
 from nets.zinc import gnn_model
 from train_zinc import train_epoch, evaluate_epoch, compute_loss
-from utils import create_optimizer, DataLoader, power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader
+from utils import create_optimizer, power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader, lapPE, RWPE
 
 if __name__ == "__main__":
   # config.update("jax_log_compiles", True)
@@ -88,7 +88,13 @@ if __name__ == "__main__":
 
   if net_params["pe_init"] == "lap_pe":
     print("adding lap PE ...", end=" ", flush=True)
-    dataset.add_lap_PEs(net_params["pos_enc_dim"])
+    pe_func = functools.partial(lapPE, pos_enc_dim=net_params["pos_enc_dim"])
+    dataset.add_PE(pe_func, ["pe", "eigvec"])
+    print("done")
+  elif net_params["pe_init"] == "rand_walk":
+    print("adding RW PE ...", end=" ", flush=True)
+    pe_func = functools.partial(RWPE, pos_enc_dim=net_params["pos_enc_dim"])
+    dataset.add_PE(pe_func, ["pe"])
     print("done")
 
   train, val, test = dataset.train, dataset.val, dataset.test

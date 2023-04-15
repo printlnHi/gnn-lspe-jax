@@ -19,7 +19,7 @@ PaddingScheme = Callable[[GraphsSize], GraphsSize]
 # TODO: Consider splitting this file out
 
 
-def add_lapPE(graph, pos_enc_dim):
+def lapPE(graph: jraph.GraphsTuple, pos_enc_dim: int = 8) -> np.ndarray:
   nodes, edges, senders, receivers, globals, n_node, n_edge = graph
   dim = nodes['feat'].shape[0]
   A = np.zeros((dim, dim))
@@ -35,10 +35,11 @@ def add_lapPE(graph, pos_enc_dim):
   # All vectors should be real, should I check this?
   eigVectors = np.real(eigVectors)
   pe = eigVectors[:, 1:pos_enc_dim + 1]
-  return graph._replace(nodes=nodes | {'pe': pe, "eigvec": pe})
+  return pe
 
 
-def add_jnp_lapPE(graph, pos_enc_dim):
+def jnp_lapPE(graph: jraph.GraphsTuple,
+              pos_enc_dim: int = 8) -> jax.numpy.ndarray:
   nodes, edges, senders, receivers, globals, n_node, n_edge = graph
   dim = nodes['feat'].shape[0]
   A = jnp.zeros((dim, dim)).at[senders, receivers].set(1)
@@ -52,7 +53,24 @@ def add_jnp_lapPE(graph, pos_enc_dim):
   eigValues, eigVectors = eigValues[idx], eigVectors[:, idx]
   eigVectors = jnp.real(eigVectors)
   pe = eigVectors[:, 1:pos_enc_dim + 1]
-  return graph._replace(nodes=nodes | {'pe': pe, "eigvec": pe})
+  return pe
+
+
+def RWPE(graph: jraph.GraphsTuple, pos_enc_dim: int = 8) -> np.ndarray:
+  nodes, edges, senders, receivers, globals, n_node, n_edge = graph
+  dim = nodes['feat'].shape[0]
+  A = np.zeros((dim, dim))
+  A[senders, receivers] = 1
+  D = np.diag(np.sum(A, axis=1))
+  RW = A @ np.linalg.inv(D)
+  # PE is diagonals of RW, RW^2, ..., RW^pos_enc_dim
+  RW_exp = RW
+  diagonals = []
+  for i in range(pos_enc_dim):
+    diagonals.append(np.diag(RW_exp))
+    RW_exp = RW_exp @ RW
+  pe = np.stack(diagonals, axis=1)
+  return pe
 
 
 def _next_power_of_two(x: int) -> int:

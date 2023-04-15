@@ -1,7 +1,7 @@
+import functools
 from typing import Any, Tuple, List
 
 from type_aliases import LabelledGraph
-from utils import add_lapPE
 import jax.numpy as jnp
 
 
@@ -14,10 +14,14 @@ class MoleculeJraphDataset:
     self.num_atom_type = num_atom_type
     self.num_bond_type = num_bond_type
 
-  def add_lap_PEs(self, pos_enc_dim):
-    self.train = [(add_lapPE(graph, pos_enc_dim), label)
-                  for graph, label in self.train]
-    self.test = [(add_lapPE(graph, pos_enc_dim), label)
-                 for graph, label in self.test]
-    self.val = [(add_lapPE(graph, pos_enc_dim), label)
-                for graph, label in self.val]
+  def add_PE(self, pe_func, keys):
+    def _add_PE(labelledGraph: LabelledGraph) -> LabelledGraph:
+      graph, label = labelledGraph
+      pe = pe_func(graph)
+      nodes = graph.nodes
+      for key in keys:
+        nodes[key] = pe
+      return (graph._replace(nodes=nodes), label)
+    self.train = list(map(_add_PE, self.train))
+    self.test = list(map(_add_PE, self.test))
+    self.val = list(map(_add_PE, self.val))

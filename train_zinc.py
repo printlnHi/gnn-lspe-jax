@@ -64,7 +64,6 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
     # As we've already produced the whole dataset time between iterations is
     # negligible
     if pe_init == "lap_pe":
-
       flip = jax.random.bernoulli(
           subkey[0], shape=batch[0].nodes['pe'].shape) * 2 - 1
       batch[0].nodes['pe'] = batch[0].nodes['pe'] * flip
