@@ -96,7 +96,7 @@ def gnn_model(net_params: Dict[str, Any],
           updated_graph,
           is_training=is_training)
 
-      nodes, edges, _, _, _, _, _ = updated_graph
+    nodes, edges, _, _, _, _, _ = updated_graph
 
     HaikuDebug("updated_graph", enable=debug)(updated_graph)
     h = nodes['feat']

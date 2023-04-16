@@ -69,8 +69,6 @@ if __name__ == "__main__":
     hyper_params["seed"] = args.seed
   if args.batch_size:
     hyper_params["batch_size"] = args.batch_size
-  if args.pe_init:
-    hyper_params["pe_init"] = args.pe_init
   hyper_params["transition_epochs"] = args.transition_epochs
 
   # development parameters
