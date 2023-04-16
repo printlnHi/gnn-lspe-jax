@@ -19,39 +19,28 @@ PaddingScheme = Callable[[GraphsSize], GraphsSize]
 # TODO: Consider splitting this file out
 
 
-def lapPE(graph: jraph.GraphsTuple, pos_enc_dim: int = 8) -> np.ndarray:
+def graphLaplacian(graph: jraph.GraphsTuple, np_=np) -> np.ndarray:
   nodes, edges, senders, receivers, globals, n_node, n_edge = graph
   dim = nodes['feat'].shape[0]
-  A = np.zeros((dim, dim))
-  A[senders, receivers] = 1
-  in_degrees = np.bincount(senders, minlength=dim)
-  N = np.diag(in_degrees ** -0.5)
-  D = np.eye(dim)
+  A = np_.zeros((dim, dim))
+  if np_ == jnp:
+    A = A.at[senders, receivers].set(1)
+  else:
+    A[senders, receivers] = 1
+  in_degrees = np_.bincount(senders, minlength=dim)
+  N = np_.diag(in_degrees ** -0.5)
+  D = np_.eye(dim)
   L = D - N @ A @ N
-  # TODO: Why does Dwivedi normalise with indegree matrix?
-  eigValues, eigVectors = np.linalg.eig(L)
+  return L
+
+
+def lapPE(graph: jraph.GraphsTuple, pos_enc_dim: int = 8, np_=np):
+  L = graphLaplacian(graph, np_)
+  eigValues, eigVectors = np_.linalg.eig(L)
   idx = eigValues.argsort()
   eigValues, eigVectors = eigValues[idx], eigVectors[:, idx]
   # All vectors should be real, should I check this?
-  eigVectors = np.real(eigVectors)
-  pe = eigVectors[:, 1:pos_enc_dim + 1]
-  return pe
-
-
-def jnp_lapPE(graph: jraph.GraphsTuple,
-              pos_enc_dim: int = 8) -> jax.numpy.ndarray:
-  nodes, edges, senders, receivers, globals, n_node, n_edge = graph
-  dim = nodes['feat'].shape[0]
-  A = jnp.zeros((dim, dim)).at[senders, receivers].set(1)
-  in_degrees = jnp.bincount(senders, minlength=dim)
-  N = jnp.diag(in_degrees ** -0.5)
-  D = jnp.eye(dim)
-  L = D - N @ A @ N
-  # TODO: Why does Dwivedi normalise with indegree matrix?
-  eigValues, eigVectors = jnp.linalg.eig(L)
-  idx = eigValues.argsort()
-  eigValues, eigVectors = eigValues[idx], eigVectors[:, idx]
-  eigVectors = jnp.real(eigVectors)
+  eigVectors = np_.real(eigVectors)
   pe = eigVectors[:, 1:pos_enc_dim + 1]
   return pe
 

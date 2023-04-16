@@ -138,6 +138,7 @@ if __name__ == "__main__":
   opt_init, opt_update = create_optimizer(hyper_params)
   opt_state = opt_init(params)
 
+    compute_loss_fn = functools.partial(compute_lapeig_inclusive_loss, net)
   train_loss_and_grad_fn = jax.value_and_grad(
     functools.partial(compute_loss, net, is_training=True), has_aux=True)
 

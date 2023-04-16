@@ -12,15 +12,13 @@ from utils import HaikuDebug
 class GatedGCNLSPELayer(hk.Module):
 
   def __init__(self, output_dim, weight_on_edges=True,
-               residual=True, dropout=0.0, use_lapeig_loss=False, debug=False, name: Optional[str] = None):
+               residual=True, dropout=0.0, debug=False, name: Optional[str] = None):
     super().__init__(name=name)
     self.output_dim = output_dim
     self.weight_on_edges = weight_on_edges
     self.residual = residual
     self.dropout = dropout
-    self.use_lapeig_loss = use_lapeig_loss
     self.debug = debug
-    assert(not use_lapeig_loss)
 
   def __call__(self, graph: jraph.GraphsTuple,
                is_training=True) -> jraph.GraphsTuple:
