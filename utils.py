@@ -160,8 +160,7 @@ def create_optimizer(
       transition_steps=hyper_params["transition_epochs"] * steps_per_epoch,
       decay_rate=hyper_params["lr_reduce_factor"],
       end_value=hyper_params["init_lr"] * 1e-2)
-  # lr =hyper_params["init_lr"]
-  return optax.adam(learning_rate=lr)
+  return optax.adamw(learning_rate=lr, weight_decay=hyper_params["weight_decay"])
 
 
 def flat_data_loader(dataset, batch_size, padding_strategy, rng):
@@ -191,7 +190,7 @@ def flat_data_loader(dataset, batch_size, padding_strategy, rng):
           graphs, labels)]
   batches = list(zip(labelled_graphs, lengths))
   batches_time = time.time()
-  print(f"total time: {batches_time - start_time} = shuffle {shuffle_time-start_time} + unpadded: {unpadded_time - shuffle_time} + batches: {batches_time - unpadded_time}")
+  #print(f"total time: {batches_time - start_time} = shuffle {shuffle_time-start_time} + unpadded: {unpadded_time - shuffle_time} + batches: {batches_time - unpadded_time}")
   return batches
 
 
