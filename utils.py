@@ -25,9 +25,11 @@ def graphLaplacian(graph: jraph.GraphsTuple, np_=np) -> np.ndarray:
   A = np_.zeros((dim, dim))
   if np_ == jnp:
     A = A.at[senders, receivers].set(1)
+    in_degrees = np_.bincount(senders, length=dim)
   else:
     A[senders, receivers] = 1
-  in_degrees = np_.bincount(senders, minlength=dim)
+    in_degrees = np_.bincount(senders, minlength=dim)
+  in_degrees = np_.clip(in_degrees, 1)
   N = np_.diag(in_degrees ** -0.5)
   D = np_.eye(dim)
   L = D - N @ A @ N

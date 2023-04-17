@@ -7,17 +7,19 @@ import jax.tree_util as tree
 import jraph
 
 from utils import HaikuDebug
+import masked
 
 
 class GatedGCNLayer(hk.Module):
 
   def __init__(self, output_dim, weight_on_edges=True,
-               residual=True, dropout=0.0, debug=False, name: Optional[str] = None):
+               residual=True, dropout=0.0, mask_batch_norm=True, debug=False, name: Optional[str] = None):
     super().__init__(name=name)
     self.output_dim = output_dim
     self.weight_on_edges = weight_on_edges
     self.residual = residual
     self.dropout = dropout
+    self.mask_batch_norm = mask_batch_norm
     self.debug = debug
 
   def __call__(self, graph: jraph.GraphsTuple,
@@ -36,15 +38,6 @@ class GatedGCNLayer(hk.Module):
     C = hk.Linear(output_dim, name="edge_multiplication_edge_logits")
     U = hk.Linear(output_dim, name="i_multiplication_node")
     V = hk.Linear(output_dim, name="j_multiplication_node")
-    batch_norm_edge = hk.BatchNorm(
-        create_scale=True,
-        create_offset=True,
-        decay_rate=0.9, name="batch_norm_edge")
-    batch_norm_node = hk.BatchNorm(
-        create_scale=True,
-        create_offset=True,
-        decay_rate=0.9, name="batch_norm_node")
-    # TODO: Check if batch norm parameters are the same as those of pytorch
 
     nodes, edges, receivers, senders, _, _, _ = graph
     h = nodes['feat']
@@ -77,7 +70,20 @@ class GatedGCNLayer(hk.Module):
 
     eta = A(h[i]) + B(h[j]) + C(e)
     HaikuDebug("eta", enable=debug)(eta)
-    edge_layer_features = jax.nn.relu(batch_norm_edge(eta, is_training))
+
+    # TODO: Check if batch norm parameters are the same as those of pytorch
+    if self.mask_batch_norm:
+      edge_mask = jraph.get_edge_padding_mask(graph)
+      edge_layer_features = masked.BatchNorm(
+          create_scale=True,
+          create_offset=True,
+          decay_rate=0.9, name="masked_batch_norm_edge")(eta, edge_mask, is_training)
+    else:
+      edge_layer_features = hk.BatchNorm(
+          create_scale=True,
+          create_offset=True,
+          decay_rate=0.9, name="batch_norm_edge")(eta, is_training)
+    edge_layer_features = jax.nn.relu(edge_layer_features)
     HaikuDebug("edge_layer_features", enable=debug)(edge_layer_features)
 
     if residual:
@@ -93,14 +99,24 @@ class GatedGCNLayer(hk.Module):
     w_sigma_sum = jax.ops.segment_sum(
         w_sigma, segment_ids=i, num_segments=sum_n_node) + 1e-6
 
-    # TODO: check this is Hadamard product
     unattnd_messages = V(h[j]) * w_sigma
     agg_unattnd_messages = jax.ops.segment_sum(
         unattnd_messages, i, num_segments=sum_n_node)  # TODO: i or j?
     node_layer_features = U(h) + agg_unattnd_messages / w_sigma_sum
     HaikuDebug("node_before", enable=debug)(node_layer_features)
-    node_layer_features = jax.nn.relu(
-      batch_norm_node(node_layer_features, is_training))
+    if self.mask_batch_norm:
+      node_mask = jraph.get_node_padding_mask(graph)
+      node_layer_features = masked.BatchNorm(
+          create_scale=True,
+          create_offset=True,
+          decay_rate=0.9, name="masked_batch_norm_node")(node_layer_features, node_mask, is_training)
+    else:
+      node_layer_features = hk.BatchNorm(
+          create_scale=True,
+          create_offset=True,
+          decay_rate=0.9, name="batch_norm_node")(node_layer_features, is_training)
+
+    node_layer_features = jax.nn.relu(node_layer_features)
     HaikuDebug("node_layer_features", enable=debug)(node_layer_features)
 
     if residual:

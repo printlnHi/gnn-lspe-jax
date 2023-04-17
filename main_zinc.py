@@ -38,12 +38,12 @@ if __name__ == "__main__":
       help="Please give a config.json file with training/model/data/param details")
   parser.add_argument("--out_dir", type=str, default=os.getcwd() + "/out")
 
+  # Run parameters
   parser.add_argument("--wandb", action="store_true")
   parser.add_argument("--wandb_entity", type=str, default="marcushandley")
   parser.add_argument("--wandb_project", type=str, default="Part II")
   parser.add_argument("--wandb_run_name", type=str, default="proto_zinc")
   parser.add_argument("--print_every", type=int, default=100)
-
   # Hyperparameters
   parser.add_argument("--seed", type=int)
   parser.add_argument("--batch_size", type=int)
@@ -51,10 +51,10 @@ if __name__ == "__main__":
   parser.add_argument("--transition_epochs", type=int, default=150)
   # Network parameters
   parser.add_argument("--pe_init", type=str)
+  parser.add_argument("--no_mask_batch_norm", action="store_true")
   # Development parameters
   parser.add_argument("--truncate_to", type=int, default=None)
   parser.add_argument("--profile", action="store_true")
-  # parser.add_argument("--padding_scheme", type=str, default="power_of_two")
 
   args = parser.parse_args()
 
@@ -78,6 +78,7 @@ if __name__ == "__main__":
   net_params = config["net_params"]
   if args.pe_init:
     net_params["pe_init"] = args.pe_init
+  net_params["mask_batch_norm"] = not args.no_mask_batch_norm
 
   # ==================== Data ====================
   dataset = datasets.zinc()

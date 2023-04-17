@@ -18,7 +18,6 @@ MutagTrainFn = Callable[[hk.Params,
                          List[LabelledGraph]],
                         MutagTrainResult]
 
-TrainBatchResult = Tuple[hk.Params, hk.State, optax.OptState, float]
 TrainResult = Tuple[hk.Params, hk.State, optax.OptState, Metrics]
 
 GraphClassifierFn = Callable[[jraph.GraphsTuple, bool], jnp.ndarray]

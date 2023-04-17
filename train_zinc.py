@@ -1,20 +1,16 @@
 import functools
-from typing import Any, Callable, Dict, List, Tuple
+import time
+from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 import haiku as hk
 import jax
 import jax.numpy as jnp
 import jraph
+import numpy as np
 import optax
-import time
 
-
-from type_aliases import (
-  Metrics,
-  TrainResult,
-  TrainBatchResult,
-    LabelledGraph)
-from utils import DataLoader
+from type_aliases import LabelledGraph, Metrics, TrainResult
+from utils import graphLaplacian
 
 
 def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.State,
@@ -108,7 +104,7 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
 
 
 def evaluate_epoch(loss_fn, params: hk.Params,
-                   state: hk.State, ds: DataLoader) -> Metrics:
+                   state: hk.State, ds: Iterable[LabelledGraph]) -> Metrics:
   """Evaluate for one epoch."""
 
   losses = []
