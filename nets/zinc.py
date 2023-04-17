@@ -29,8 +29,8 @@ def gnn_model(net_params: Dict[str, Any],
   batch_norm = net_params['batch_norm']
   residual = net_params['residual']
   edge_feat = net_params['edge_feat']
-  # device = net_params['device'] #TODO: What do I do with this?
   pe_init = net_params['pe_init']
+  maks_batch_norm = net_params['mask_batch_norm']
 
   use_lapeig_loss = net_params['use_lapeig_loss']
   lambda_loss = net_params['lambda_loss']
@@ -75,26 +75,22 @@ def gnn_model(net_params: Dict[str, Any],
         n_edge=n_edge,
         globals=globals)
 
+    layer_args = {'output_dim': hidden_dim, 'residual': residual,
+                  'dropout': dropout, 'mask_batch_norm': maks_batch_norm}
+    final_layer_args = layer_args | {'output_dim': out_dim}
+
     if pe_init == 'rand_walk':
       for _ in range(n_layers - 1):
-        updated_graph = GatedGCNLSPELayer(output_dim=hidden_dim, residual=residual, dropout=dropout,
-                                          )(updated_graph, is_training=is_training)
+        updated_graph = GatedGCNLSPELayer(
+          **layer_args)(updated_graph, is_training=is_training)
       updated_graph = GatedGCNLSPELayer(
-          output_dim=out_dim,
-          residual=residual,
-          dropout=dropout)(
-          updated_graph,
-          is_training=is_training)
+        **final_layer_args)(updated_graph, is_training=is_training)
     else:
       for _ in range(n_layers - 1):
-        updated_graph = GatedGCNLayer(output_dim=hidden_dim, residual=residual, dropout=dropout,
-                                      )(updated_graph, is_training=is_training)
+        updated_graph = GatedGCNLayer(
+          **layer_args)(updated_graph, is_training=is_training)
       updated_graph = GatedGCNLayer(
-          output_dim=out_dim,
-          residual=residual,
-          dropout=dropout)(
-          updated_graph,
-          is_training=is_training)
+        **final_layer_args)(updated_graph, is_training=is_training)
 
     nodes, edges, _, _, _, _, _ = updated_graph
 
