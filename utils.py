@@ -148,21 +148,6 @@ def pad_labelled_graph(labelled_graph: LabelledGraph,
   return padded_graphs_tuple, padded_label
 
 
-def create_optimizer(
-  hyper_params: Dict[str, Any]) -> optax.GradientTransformation:
-  # TODO: replace learning_rate with a scheduler that uses appropriate hyper parameters
-  # TODO: understand what params "weight decay" is
-  steps_per_epoch = (
-      10000 + hyper_params["batch_size"] - 1) // hyper_params["batch_size"]
-  print("steps per epoch", steps_per_epoch)
-  lr = optax.exponential_decay(
-      init_value=hyper_params["init_lr"],
-      transition_steps=hyper_params["transition_epochs"] * steps_per_epoch,
-      decay_rate=hyper_params["lr_reduce_factor"],
-      end_value=hyper_params["init_lr"] * 1e-2)
-  return optax.adamw(learning_rate=lr, weight_decay=hyper_params["weight_decay"])
-
-
 def flat_data_loader(dataset, batch_size, padding_strategy, rng):
   start_time = time.time()
   n = len(dataset)

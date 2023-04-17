@@ -14,8 +14,9 @@ import optax
 import datasets
 import wandb
 from nets.zinc import gnn_model
-from train_zinc import train_epoch, evaluate_epoch, compute_loss
-from utils import create_optimizer, power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader, lapPE, RWPE
+from train_zinc import train_epoch, evaluate_epoch, compute_loss, compute_lapeig_inclusive_loss
+from utils import power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader, lapPE, RWPE
+from optimization import create_optimizer_with_learning_rate_hyperparam, create_reduce_lr_on_plateau
 
 if __name__ == "__main__":
   # config.update("jax_log_compiles", True)
@@ -136,8 +137,10 @@ if __name__ == "__main__":
   params, state = net.init(subkey, train[0][0], is_training=True)
   del subkey
 
-  opt_init, opt_update = create_optimizer(hyper_params)
+  opt_init, opt_update = create_optimizer_with_learning_rate_hyperparam(
+    hyper_params)
   opt_state = opt_init(params)
+  lr_determiner = create_reduce_lr_on_plateau(hyper_params)
 
   # Delete this comment
   train_loss_and_grad_fn = jax.value_and_grad(
@@ -175,6 +178,7 @@ if __name__ == "__main__":
         "epochs"] - 1
       epoch_started = time.time()
       seen_sizes = len(padded_graph_sizes)
+      lr = opt_state.hyperparams['learning_rate']
 
       # Train for one epoch.
       rng, subkey = jax.random.split(rng)
@@ -192,6 +196,8 @@ if __name__ == "__main__":
       if print_epoch_metrics:
         print(
             f'Epoch {epoch} - val loss: {val_metrics["loss"]}')
+      opt_state.hyperparams['learning_rate'] = lr_determiner(
+        val_metrics["loss"])
       val_finished = time.time()
 
       new_sizes = len(padded_graph_sizes) - seen_sizes
@@ -215,7 +221,7 @@ if __name__ == "__main__":
 
       if args.wandb:
         train_metrics = {'train ' + k: v for k, v in train_metrics.items()}
-        wandb.log({"epoch": epoch} | timing_metrics |
+        wandb.log({"epoch": epoch, 'lr': lr} | timing_metrics |
                   train_metrics | {'val ' + k: v for k, v in val_metrics.items()})
 
     if args.profile:

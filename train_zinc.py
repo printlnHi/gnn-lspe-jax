@@ -21,22 +21,33 @@ def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.Stat
   mask = jraph.get_graph_padding_mask(graph)
   # L1 loss
   loss = jnp.sum(jnp.abs(scores - label) * mask) / jnp.sum(mask)
-  """print("scores", scores.shape, scores)
-  print("label", label.shape, label)
-  print("mask", mask.shape, mask)
-  print("scores-label", (scores - label).shape, scores - label)
-  print(
-      "abs(scores-label)",
-      jnp.abs(
-          scores -
-          label).shape,
-      jnp.abs(
-          scores -
-          label))
-  print("abs(scores-label) * mask",
-        (jnp.abs(scores - label) * mask).shape,
-        jnp.abs(scores - label) * mask)
-  print("loss", loss.shape, loss)"""
+  return loss, state
+
+
+def compute_lapeig_inclusive_loss(net: hk.TransformedWithState, net_params, params: hk.Params, state: hk.State,
+                                  batch: LabelledGraph, rng: jax.random.KeyArray, is_training: bool) -> Tuple[jnp.ndarray, hk.State]:
+  graph, label = batch
+  (scores, p), state = net.apply(
+    params, state, rng, graph, is_training=is_training)
+  graph_mask = jraph.get_graph_padding_mask(graph)
+  node_mask = jraph.get_node_padding_mask(graph)
+  jraph.get_number_of_padding_with_graphs_edges
+  num_graphs = jnp.sum(graph_mask)
+  num_nodes = jnp.sum(node_mask)
+
+  task_loss = jnp.sum(jnp.abs(scores - label) * graph_mask) / num_graphs
+
+  L = graphLaplacian(graph, np_=jnp)
+  pT = jnp.transpose(p)
+  trace = jnp.trace(pT @ L @ p)
+  print("L", L)
+  print("p", p)
+  print("trace", trace)
+
+  positional_loss = trace / \
+      (net_params["pos_enc_dim"] * num_graphs * num_nodes)
+
+  loss = task_loss + net_params['alpha_loss'] * positional_loss
   return loss, state
 
 
@@ -65,12 +76,10 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
       batch[0].nodes['pe'] = batch[0].nodes['pe'] * flip
 
     batch_start = time.time()
-    (loss, state), grads = loss_and_grad_fn(
-      params, state, batch, subkey[1])
+    (loss, state), grads = loss_and_grad_fn(params, state, batch, subkey[1])
     loss_end = time.time()
 
-    updates, opt_state = opt_update(
-        grads, opt_state, params)
+    updates, opt_state = opt_update(grads, opt_state, params)
     opt_update_end = time.time()
 
     params = opt_apply_updates(params, updates)
@@ -92,8 +101,7 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
   total_batch_times = loss_and_grad_times + opt_update_times + opt_apply_times
 
   time_metrics = {
-      "total_epoch_time_ALT": time.time() -
-      epoch_start_time,
+      "total_epoch_time_ALT": time.time() - epoch_start_time,
       "dataset_time": dataset_time}
   for times, name in zip([loss_and_grad_times, opt_update_times, opt_apply_times, total_batch_times], [
                          "loss_and_grad_times", "opt_update_times", "opt_apply_times", "total_batch_times", "pre_iter_times"]):
