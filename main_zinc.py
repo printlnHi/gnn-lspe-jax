@@ -101,7 +101,7 @@ if __name__ == "__main__":
     dataset.add_PE(pe_func, ["pe"])
     print("done")
 
-  train, val, test = dataset.train, dataset.val, dataset.test
+  train, val, test = dataset.train, dataset.test, dataset.val
   if hyper_params["truncate_to"] is not None:
     train = train[:hyper_params["truncate_to"]]
     val = val[:hyper_params["truncate_to"]]
