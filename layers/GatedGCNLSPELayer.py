@@ -105,6 +105,7 @@ class GatedGCNLSPELayer(hk.Module):
         unattnd_messages, i, num_segments=sum_n_node)
     node_layer_features = U(jnp.concatenate(
       [h, p], axis=1)) + agg_unattnd_messages / w_sigma_sum
+    node_layer_features *= nodes['snorm_n'][:, None]
     HaikuDebug("node_before", enable=debug)(node_layer_features)
 
     h *= nodes['snorm_n'][:, None]
