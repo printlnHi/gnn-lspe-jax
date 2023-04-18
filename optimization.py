@@ -15,8 +15,8 @@ import optax
 
 
 def create_optimizer_with_learning_rate_hyperparam(hyper_params: Dict[str, Any]) -> optax.GradientTransformation:
-  init_lr = hyper_params["init_lr"]
-  return optax.inject_hyperparams(optax.adamw)(learning_rate=init_lr, weight_decay=hyper_params["weight_decay"])
+  return optax.inject_hyperparams(optax.adamw)(learning_rate=hyper_params["init_lr"],
+                                               weight_decay=hyper_params["weight_decay"])
 
 
 def create_lr_exponential_decay(hyper_params: Dict[str, Any]) -> optax.Schedule:
@@ -100,8 +100,9 @@ class ReduceLROnPlateau(object):
 
 
 def create_reduce_lr_on_plateau(hyper_params: Dict[str, Any]) -> Callable[[float], float]:
+  # We use min_lr as stopping point rather than a simple floor
   return ReduceLROnPlateau(
-    hyper_params["init_lr"], hyper_params["lr_reduce_factor"], hyper_params["lr_schedule_patience"], hyper_params["min_lr"])
+    hyper_params["init_lr"], hyper_params["lr_reduce_factor"], hyper_params["lr_schedule_patience"], min_lr=0)
 
 
 '''def create_optimizer_and_lr_tracker(hyper_params: Dict[str, Any]) -> Tuple[optax.GradientTransformation, Callable[[float, optax.OptState], optax.OptState]]:

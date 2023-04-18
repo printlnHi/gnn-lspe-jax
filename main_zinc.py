@@ -140,6 +140,9 @@ if __name__ == "__main__":
   opt_init, opt_update = create_optimizer_with_learning_rate_hyperparam(
     hyper_params)
   opt_state = opt_init(params)
+
+  min_lr = hyper_params["min_lr"]
+  # We use min_lr as stopping point rather than a simple floor
   lr_determiner = create_reduce_lr_on_plateau(hyper_params)
 
   # Delete this comment
@@ -179,6 +182,9 @@ if __name__ == "__main__":
       epoch_started = time.time()
       seen_sizes = len(padded_graph_sizes)
       lr = opt_state.hyperparams['learning_rate']
+      if lr < min_lr:
+        print("Learning rate below min_lr, stopping training")
+        break
 
       # Train for one epoch.
       rng, subkey = jax.random.split(rng)
