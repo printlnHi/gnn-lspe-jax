@@ -164,7 +164,8 @@ if __name__ == "__main__":
         entity=args.wandb_entity,
         name=args.wandb_run_name, config=hyper_params | net_params, tags=tags,
         save_code=True)
-
+    commit_id = run._commit
+    wandb.config.update({"commit_id": commit_id})
   try:
 
     # ==================== Training loop ====================
