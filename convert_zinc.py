@@ -33,7 +33,7 @@ def convert(ds: MoleculeDGL) -> List[Tuple[jraph.GraphsTuple, np.ndarray]]:
 
 
 jraphDataset = MoleculeJraphDataset(convert(ds.train), convert(ds.val),
-                                    convert(ds.test), ds.num_atom_type, ds.num_bond_type)
+                                    convert(ds.test), num_atom_type=ds.num_atom_type, num_bond_type=ds.num_bond_type)
 
 with open('data/zinc_jraph.pickle', 'wb') as f:
   pickle.dump(jraphDataset, f)

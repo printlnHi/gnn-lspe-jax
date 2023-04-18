@@ -53,6 +53,8 @@ if __name__ == "__main__":
   # Network parameters
   parser.add_argument("--pe_init", type=str)
   parser.add_argument("--no_mask_batch_norm", action="store_true")
+  parser.add_argument("--dropout", type=float)
+  parser.add_argument("--in_feat_dropout", type=float)
   # Development parameters
   parser.add_argument("--truncate_to", type=int, default=None)
   parser.add_argument("--profile", action="store_true")
@@ -85,6 +87,8 @@ if __name__ == "__main__":
   dataset = datasets.zinc()
   net_params["num_atom_type"] = dataset.num_atom_type
   net_params["num_bond_type"] = dataset.num_bond_type
+
+  dataset.add_norms()
 
   if net_params["pe_init"] == "lap_pe":
     print("adding lap PE ...", end=" ", flush=True)
