@@ -13,13 +13,14 @@ import masked
 class GatedGCNLSPELayer(hk.Module):
 
   def __init__(self, output_dim, weight_on_edges=True,
-               residual=True, dropout=0.0, mask_batch_norm=True, debug=False, name: Optional[str] = None):
+               residual=True, dropout=0.0, mask_batch_norm=True, graph_norm=True, debug=False, name: Optional[str] = None):
     super().__init__(name=name)
     self.output_dim = output_dim
     self.weight_on_edges = weight_on_edges
     self.residual = residual
     self.dropout = dropout
     self.mask_batch_norm = mask_batch_norm
+    self.graph_norm = graph_norm
     self.debug = debug
 
   def __call__(self, graph: jraph.GraphsTuple,
@@ -105,7 +106,8 @@ class GatedGCNLSPELayer(hk.Module):
         unattnd_messages, i, num_segments=sum_n_node)
     node_layer_features = U(jnp.concatenate(
       [h, p], axis=1)) + agg_unattnd_messages / w_sigma_sum
-    node_layer_features *= nodes['snorm_n'][:, None]
+    if self.graph_norm:
+      node_layer_features *= nodes['snorm_n'][:, None]
     HaikuDebug("node_before", enable=debug)(node_layer_features)
 
     if self.mask_batch_norm:

@@ -3,12 +3,9 @@
         "use": true,
         "id": 0
     },
-    
     "model": "GatedGCN",
     "dataset": "ZINC",
-    
     "out_dir": "out/GatedGCN_ZINC_NoPE/",
-    
     "params": {
         "seed": 41,
         "epochs": 1000,
@@ -21,7 +18,6 @@
         "print_epoch_interval": 5,
         "max_time": 12
     },
-    
     "net_params": {
         "L": 16,
         "hidden_dim": 78,
@@ -32,6 +28,7 @@
         "in_feat_dropout": 0.0,
         "dropout": 0.0,
         "batch_norm": true,
+        "graph_norm": false,
         "pe_init": "no_pe",
         "pos_enc_dim": 16,
         "use_lapeig_loss": false,

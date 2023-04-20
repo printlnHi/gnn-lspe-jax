@@ -55,6 +55,8 @@ if __name__ == "__main__":
   parser.add_argument("--no_mask_batch_norm", action="store_true")
   parser.add_argument("--dropout", type=float)
   parser.add_argument("--in_feat_dropout", type=float)
+  parser.add_argument("--no_graph_norm", action="store_true")
+  parser.add_argument("--graph_norm", action="store_true")
   # Development parameters
   parser.add_argument("--truncate_to", type=int, default=None)
   parser.add_argument("--profile", action="store_true")
@@ -84,6 +86,12 @@ if __name__ == "__main__":
   if args.pe_init:
     net_params["pe_init"] = args.pe_init
   net_params["mask_batch_norm"] = not args.no_mask_batch_norm
+  if args.no_graph_norm and args.graph_norm:
+    raise ValueError("Cannot override graph norm to be both true and false")
+  elif args.no_graph_norm:
+    net_params["graph_norm"] = False
+  elif args.graph_norm:
+    net_params["graph_norm"] = True
 
   # ==================== Data ====================
   dataset = datasets.zinc()
@@ -247,12 +255,15 @@ if __name__ == "__main__":
 
     # ==================== Final evaluation ====================
     # ~We want padded graph sizes from the training loop only~
+    print("Evaluating...")
+
     padded_graph_sizes_stringified = {
         str(size): count for size,
         count in padded_graph_sizes.items()}
     graph_sizes_seen = len(padded_graph_sizes)
 
     if args.truncate_to:
+      print('Evaluating on validation set...')
       valloader = flat_data_loader(
           dataset.val,
           hyper_params["batch_size"],
@@ -261,12 +272,13 @@ if __name__ == "__main__":
       final_val_metrics = evaluate_epoch(
           eval_loss_fn, params, state, valloader)
     elif val_metrics is None:
+      print('Evaluating on validation set...')
       final_val_metrics = evaluate_epoch(
           eval_loss_fn, params, state, valloader)
     else:
       final_val_metrics = val_metrics
 
-    print("ABOUT TO EVALUATE TEST")
+    print('Evaluating on test set...')
     final_test_metrics = evaluate_epoch(
         eval_loss_fn, params, state, testloader)
 
