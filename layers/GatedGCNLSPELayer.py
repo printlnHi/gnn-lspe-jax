@@ -108,7 +108,6 @@ class GatedGCNLSPELayer(hk.Module):
     node_layer_features *= nodes['snorm_n'][:, None]
     HaikuDebug("node_before", enable=debug)(node_layer_features)
 
-    h *= nodes['snorm_n'][:, None]
     if self.mask_batch_norm:
       node_mask = jraph.get_node_padding_mask(graph)
       node_layer_features = masked.BatchNorm(
