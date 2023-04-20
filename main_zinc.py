@@ -58,6 +58,7 @@ if __name__ == "__main__":
   # Development parameters
   parser.add_argument("--truncate_to", type=int, default=None)
   parser.add_argument("--profile", action="store_true")
+  parser.add_argument("--swap_test_val", action="store_true")
 
   args = parser.parse_args()
 
@@ -76,6 +77,7 @@ if __name__ == "__main__":
 
   # development parameters
   hyper_params["truncate_to"] = args.truncate_to
+  hyper_params["swap_test_val"] = args.swap_test_val
 
   # network parameters
   net_params = config["net_params"]
@@ -101,7 +103,11 @@ if __name__ == "__main__":
     dataset.add_PE(pe_func, ["pe"])
     print("done")
 
-  train, val, test = dataset.train, dataset.test, dataset.val
+  if args.swap_test_val:
+    train, val, test = dataset.train, dataset.test, dataset.val
+  else:
+    train, val, test = dataset.train, dataset.val, dataset.test
+
   if hyper_params["truncate_to"] is not None:
     train = train[:hyper_params["truncate_to"]]
     val = val[:hyper_params["truncate_to"]]
