@@ -196,6 +196,7 @@ if __name__ == "__main__":
     if args.profile:
       jax.profiler.start_trace("out", False, True)
 
+    epoch = 0
     for epoch in range(hyper_params["epochs"]):
       print_epoch_metrics = epoch % args.print_every == 0 or epoch == hyper_params[
         "epochs"] - 1
@@ -286,7 +287,8 @@ if __name__ == "__main__":
         'graph_sizes_seen': graph_sizes_seen,
         'total_train_time': total_train_time,
         'total_val_time': total_val_time,
-        'total_epoch_time': total_train_time + total_val_time}
+        'total_epoch_time': total_train_time + total_val_time,
+        'num_epochs': epoch + 1}
 
     final_val_metrics = {
         'final val ' + k: v for k,
