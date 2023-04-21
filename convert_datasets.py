@@ -5,12 +5,12 @@ import dgl
 import jax.tree_util as tree
 import jraph
 import numpy as np
-from torch.utils.data import DataLoader
 
-from data.molecules import MoleculeDataset, MoleculeDGL
-from data.MoleculeJraphDataset import MoleculeJraphDataset
+from ogb.utils.features import get_atom_feature_dims, get_bond_feature_dims
 
-ds = MoleculeDataset('ZINC')
+from data.molecules import MoleculeDataset
+from data.ogb_mol import OGBMOLDataset
+from data.molecule_jraph_dataset import MoleculeJraphDataset
 
 
 def convert_to_jraph(dgl_graph: dgl.DGLGraph) -> jraph.GraphsTuple:
@@ -28,12 +28,19 @@ def convert_to_jraph(dgl_graph: dgl.DGLGraph) -> jraph.GraphsTuple:
     n_edge=dgl_graph.batch_num_edges().numpy())
 
 
-def convert(ds: MoleculeDGL) -> List[Tuple[jraph.GraphsTuple, np.ndarray]]:
+def convert(ds) -> List[Tuple[jraph.GraphsTuple, np.ndarray]]:
   return [(convert_to_jraph(graph), label.numpy()) for graph, label in ds]
 
 
-jraphDataset = MoleculeJraphDataset(convert(ds.train), convert(ds.val),
-                                    convert(ds.test), num_atom_type=ds.num_atom_type, num_bond_type=ds.num_bond_type)
-
+ds = MoleculeDataset('ZINC')
+jraphDataset = MoleculeJraphDataset(convert(ds.train), convert(ds.val), convert(
+  ds.test), atom_feature_dims=[ds.num_atom_type], bond_feature_dims=[ds.num_bond_type])
 with open('data/zinc_jraph.pickle', 'wb') as f:
+  pickle.dump(jraphDataset, f)
+
+
+ds = OGBMOLDataset("OGBG-MOLTOX21")
+jraphDataset = MoleculeJraphDataset(
+  convert(ds.train), convert(ds.val), convert(ds.test), atom_feature_dims=get_atom_feature_dims(), bond_feature_dims=get_bond_feature_dims(), num_classes=ds.dataset.num_tasks)
+with open('data/moltox21_jraph.pickle', 'wb') as f:
   pickle.dump(jraphDataset, f)

@@ -12,6 +12,7 @@ from layers.GatedGCNLSPELayer import GatedGCNLSPELayer
 from layers.mlp_readout_layer import mlp_readout
 from type_aliases import GraphClassifierInput, GraphClassifierOutput
 from utils import HaikuDebug
+from multi_embedder import MultiEmbedder
 
 g_init, g_apply = hk.transform_with_state(GatedGCNLayer)
 
@@ -32,10 +33,13 @@ def gated_gcn_net(net_params, h_encoder, e_encoder, task_out_dim, graph: jraph.G
   pos_enc_dim = net_params['pos_enc_dim']
   """A gatedGCN model."""
   nodes, edges, receivers, senders, globals, n_node, n_edge = graph
+  HaikuDebug("input_graph", enable=debug)(graph)
   sum_n_node = nodes['feat'].shape[0]
   num_graphs = n_node.shape[0]
 
+  HaikuDebug("unencoded_h", enable=debug)(nodes['feat'])
   h = h_encoder(nodes['feat'])
+  HaikuDebug("h_encoded", enable=debug)(h)
   if is_training:
     h = hk.dropout(hk.next_rng_key(), in_feat_dropout, h)
 
@@ -48,6 +52,7 @@ def gated_gcn_net(net_params, h_encoder, e_encoder, task_out_dim, graph: jraph.G
     nodes = nodes | {'pos': p}
 
   e = e_encoder(edges['feat'])
+  HaikuDebug("e_encoded", enable=debug)(e)
 
   nodes = nodes | {'feat': h}
   edges = edges | {'feat': e}
@@ -64,6 +69,7 @@ def gated_gcn_net(net_params, h_encoder, e_encoder, task_out_dim, graph: jraph.G
                 'dropout': dropout, 'mask_batch_norm': mask_batch_norm, 'graph_norm': graph_norm}
   final_layer_args = layer_args | {'output_dim': out_dim}
 
+  HaikuDebug("before_layers_updated_graph", enable=debug)(updated_graph)
   if pe_init == 'rand_walk':
     for _ in range(n_layers - 1):
       updated_graph = GatedGCNLSPELayer(
@@ -113,16 +119,33 @@ def gated_gcn_net(net_params, h_encoder, e_encoder, task_out_dim, graph: jraph.G
   return jnp.squeeze(mlp_result), updated_graph
 
 
-def zinc_model(net_params: Dict[str, Any],
+def zinc_model(task_dims: Dict[str, Any], net_params: Dict[str, Any],
                debug: bool = False) -> Callable[GraphClassifierInput, GraphClassifierOutput]:
+
+  assert(len(task_dims['atom']) == 1) and (len(task_dims['bond']) == 1)
+  num_atom_type = task_dims['atom'][0]
+  num_bond_type = task_dims['bond'][0]
+  hidden_dim = net_params['hidden_dim']
 
   def net(graph: jraph.GraphsTuple,
           is_training: bool) -> GraphClassifierOutput:
-    num_atom_type = net_params['num_atom_type']
-    num_bond_type = net_params['num_bond_type']
-    hidden_dim = net_params['hidden_dim']
     h_encoder = hk.Embed(vocab_size=num_atom_type, embed_dim=hidden_dim)
     e_encoder = hk.Embed(vocab_size=num_bond_type, embed_dim=hidden_dim)
     task_out_dim = 1
+    return gated_gcn_net(net_params, h_encoder, e_encoder, task_out_dim, graph, is_training, debug=debug)
+  return net
+
+
+def moltox21_model(task_dims: Dict[str, Any], net_params: Dict[str, Any], debug: bool = False) -> Callable[GraphClassifierInput, GraphClassifierOutput]:
+
+  glorot_uniform = hk.initializers.VarianceScaling(1.0, "fan_avg", "uniform")
+  hidden_dim = net_params['hidden_dim']
+  task_out_dim = task_dims['classes']
+
+  def net(graph: jraph.GraphsTuple, is_training: bool) -> GraphClassifierOutput:
+    h_encoder = MultiEmbedder(
+      task_dims['atom'], hidden_dim, w_init=glorot_uniform)
+    e_encoder = MultiEmbedder(
+      task_dims['bond'], hidden_dim, w_init=glorot_uniform)
     return gated_gcn_net(net_params, h_encoder, e_encoder, task_out_dim, graph, is_training, debug=debug)
   return net

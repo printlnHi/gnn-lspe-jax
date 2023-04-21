@@ -160,8 +160,12 @@ def flat_data_loader(dataset, batch_size, padding_strategy, rng):
   graphs, labels = zip(*dataset)
   graphs = [jraph.batch_np(graphs[i * batch_size:(i + 1) * batch_size])
             for i in range(length)]
-  labels = [np.concatenate(
-      labels[i * batch_size:(i + 1) * batch_size], axis=0) for i in range(length)]
+  if labels[0].shape == (1, ):
+    labels = [np.concatenate(
+        labels[i * batch_size:(i + 1) * batch_size], axis=0) for i in range(length)]
+  else:
+    labels = [np.array(
+        labels[i * batch_size:(i + 1) * batch_size]) for i in range(length)]
   lengths = [
     batch_size if i < length -
     1 else n -
@@ -177,62 +181,6 @@ def flat_data_loader(dataset, batch_size, padding_strategy, rng):
   batches_time = time.time()
   #print(f"total time: {batches_time - start_time} = shuffle {shuffle_time-start_time} + unpadded: {unpadded_time - shuffle_time} + batches: {batches_time - unpadded_time}")
   return batches
-
-
-class DataLoaderIterator:
-  def __init__(self, dataset, batch_indicies, batch_size, padding_strategy):
-    self.dataset = dataset
-    self.batch_indicies = batch_indicies
-    self.batch_index = 0
-    self.batch_size = batch_size
-    self.padding_strategy = padding_strategy
-
-  def __next__(self) -> Tuple[LabelledGraph, int]:
-    if self.batch_index >= len(self.batch_indicies):
-      raise StopIteration
-    batch_graphs = [self.dataset[index][0]
-                    for index in self.batch_indicies[self.batch_index]]
-    batch_labels = [self.dataset[index][1]
-                    for index in self.batch_indicies[self.batch_index]]
-    labelled_graph = (jraph.batch(batch_graphs), jnp.concatenate(batch_labels))
-    self.batch_index += 1
-    return (pad_labelled_graph(labelled_graph,
-            self.padding_strategy), len(batch_graphs))
-
-  def __iter__(self) -> Iterator[Tuple[LabelledGraph, int]]:
-    return self
-
-
-class DataLoader:
-  def __init__(self, dataset: np.ndarray, batch_size: int,
-               rng: Optional[jax.random.KeyArray] = None, padding_strategy: PaddingScheme = power_of_two_padding):
-    """Create a batched data loader
-    params:
-      dataset: a list of data points
-      batch_size: the size of each batch
-      rng: a jax.random.KeyArray to shuffle the dataset or None to disable shuffling
-      padding_stategy: a potentially stateful function to determine each batch's padding
-    """
-    self.dataset = dataset  # TODO: Consider whether this should be a jax array, storing this on device and whether we should pre-produce the batches
-    self.batch_size = batch_size
-    self.rng = rng
-    self.length = (len(dataset) + batch_size - 1) // batch_size
-    self.padding_strategy = padding_strategy
-
-  def __iter__(self) -> Iterator[Tuple[LabelledGraph, int]]:
-    n = len(self.dataset)
-    if self.rng is not None:
-      self.rng, subkey = jax.random.split(self.rng)
-      indicies = jax.random.permutation(subkey, n, independent=True)
-    else:
-      indicies = jnp.arange(n)
-    split_points = jnp.arange(self.batch_size, n, self.batch_size)
-    batch_indicies = np.split(indicies, split_points)
-    return DataLoaderIterator(
-      self.dataset, batch_indicies, self.batch_size, self.padding_strategy)
-
-  def __len__(self) -> int:
-    return self.length
 
 
 class HaikuDebug(hk.Module):

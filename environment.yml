@@ -17,3 +17,4 @@ dependencies:
    - dgl==0.9.1 ##DGL 1 breaks ZINC dataset
    - optax
    - tqdm
+   - ogb==1.3.1

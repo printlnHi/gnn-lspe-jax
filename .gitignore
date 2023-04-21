@@ -8,3 +8,4 @@ wandb/
 out/**
 scratch/**
 scratch*
+dataset/**

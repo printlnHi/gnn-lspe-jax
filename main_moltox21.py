@@ -8,26 +8,23 @@ import time
 import haiku as hk
 import jax
 from jax.config import config
+import jraph
 import numpy as np
 import optax
 
 import datasets
 import wandb
-from nets import zinc_model
-from train_zinc import train_epoch, evaluate_epoch, compute_loss, compute_lapeig_inclusive_loss
+from nets import moltox21_model
+from train_moltox21 import train_epoch, evaluate_epoch, compute_loss, compute_lapeig_inclusive_loss
 from utils import power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader, lapPE, RWPE
 from optimization import create_optimizer_with_learning_rate_hyperparam, create_reduce_lr_on_plateau
 
 if __name__ == "__main__":
-  # config.update("jax_log_compiles", True)
-  '''
-  import logging
-  logging.getLogger("jax").setLevel(logging.DEBUG)
-  '''
 
   print("jax backend:", jax.lib.xla_bridge.get_backend().platform)
   print("jax devices:", jax.devices())
   print()
+  #config.update("jax_debug_nans", True)
 
   # ==================== Load parameters ====================
   # Parameters are loaded from config and can be overwritten from command line
@@ -42,8 +39,8 @@ if __name__ == "__main__":
   # Run parameters
   parser.add_argument("--wandb", action="store_true")
   parser.add_argument("--wandb_entity", type=str, default="marcushandley")
-  parser.add_argument("--wandb_project", type=str, default="Part II")
-  parser.add_argument("--wandb_run_name", type=str, default="proto_zinc")
+  parser.add_argument("--wandb_project", type=str, default="Part-II-MOLTOX21")
+  parser.add_argument("--wandb_run_name", type=str, default="proto_moltox21")
   parser.add_argument("--print_every", type=int, default=100)
   # Hyperparameters
   parser.add_argument("--seed", type=int)
@@ -94,8 +91,9 @@ if __name__ == "__main__":
     net_params["graph_norm"] = True
 
   # ==================== Data ====================
-  dataset = datasets.zinc()
+  dataset = datasets.moltox21()
   task_dims = dataset.task_dims()
+
   dataset.add_norms()
 
   if net_params["pe_init"] == "lap_pe":
@@ -146,11 +144,14 @@ if __name__ == "__main__":
       None)
   # ============= Model, Train and Eval functions =============
 
-  net_fn = zinc_model(task_dims, net_params)
+  net_fn = moltox21_model(task_dims, net_params)
   net = hk.transform_with_state(net_fn)
 
   rng, subkey = jax.random.split(rng)
-  params, state = net.init(subkey, train[0][0], is_training=True)
+  print("net init")
+  params, state = net.init(subkey, jraph.pad_with_graphs(
+    train[0][0], 1024, 1024), is_training=True)
+  print("done")
   del subkey
 
   opt_init, opt_update = create_optimizer_with_learning_rate_hyperparam(
@@ -179,7 +180,6 @@ if __name__ == "__main__":
 
   # ==================== Training ====================
   if args.wandb:
-    tags = ["zinc"]
     pe_init = net_params["pe_init"]
     if net_params['use_lapeig_loss']:
       pe_init += "lapeig_loss"
@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
     # ==================== Training loop ====================
 
-    print("Training...")
+    print("Training...", flush=True)
     val_metrics = None
     total_train_time = 0
     total_val_time = 0

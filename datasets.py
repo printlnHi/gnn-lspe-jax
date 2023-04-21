@@ -1,6 +1,6 @@
 import pickle
 from utils import pad_labelled_graph, monotonic_power_of_two_padding
-from data.MoleculeJraphDataset import MoleculeJraphDataset
+from data.molecule_jraph_dataset import MoleculeJraphDataset
 
 
 def mutag():
@@ -13,5 +13,11 @@ def mutag():
 
 def zinc() -> MoleculeJraphDataset:
   with open('data/zinc_jraph.pickle', 'rb') as f:
+    ds = pickle.load(f)
+  return ds
+
+
+def moltox21() -> MoleculeJraphDataset:
+  with open('data/moltox21_jraph.pickle', 'rb') as f:
     ds = pickle.load(f)
   return ds

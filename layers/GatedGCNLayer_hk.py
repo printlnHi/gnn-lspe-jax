@@ -55,10 +55,10 @@ class GatedGCNLayer(hk.Module):
     assert(edges is not None)
 
     if residual and h.shape[1] != output_dim:
-      raise ValueError(f"For residual connections the output_dim ({output_dim}) must match"
+      raise ValueError(f"For residual connections the output_dim ({output_dim}) must match "
                        f"the node feature dimension {h.shape[1]}")
     if residual and e.shape[1] != output_dim:
-      raise ValueError(f"For residual connections the output_dim ({output_dim}) must match"
+      raise ValueError(f"For residual connections the output_dim ({output_dim}) must match "
                        f"the edge feature dimension {e.shape[1]}")
 
     assert(
