@@ -164,7 +164,8 @@ if __name__ == "__main__":
   lr_determiner = create_reduce_lr_on_plateau(hyper_params)
 
   if net_params['use_lapeig_loss']:
-    compute_loss_fn = functools.partial(compute_lapeig_inclusive_loss, net, net_params)
+    compute_loss_fn = functools.partial(
+      compute_lapeig_inclusive_loss, net, net_params)
   else:
     compute_loss_fn = functools.partial(compute_loss, net)
 
@@ -181,10 +182,13 @@ if __name__ == "__main__":
   # ==================== Training ====================
   if args.wandb:
     tags = ["zinc"]
+    pe_init = net_params["pe_init"]
+    if net_params['use_lapeig_loss']:
+      pe_init += "lapeig_loss"
     run = wandb.init(
         project=args.wandb_project,
         entity=args.wandb_entity,
-        name=args.wandb_run_name, config=hyper_params | net_params, tags=tags,
+        name=args.wandb_run_name, config=hyper_params | net_params | {'pe_init':pe_init}, tags=tags,
         save_code=True)
     commit_id = run._commit
     wandb.config.update({"commit_id": commit_id})
