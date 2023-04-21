@@ -13,7 +13,7 @@ import optax
 
 import datasets
 import wandb
-from nets.zinc import gnn_model
+from nets.zinc import zinc_model
 from train_zinc import train_epoch, evaluate_epoch, compute_loss, compute_lapeig_inclusive_loss
 from utils import power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader, lapPE, RWPE
 from optimization import create_optimizer_with_learning_rate_hyperparam, create_reduce_lr_on_plateau
@@ -153,7 +153,7 @@ if __name__ == "__main__":
       None)
   # ============= Model, Train and Eval functions =============
 
-  net_fn = gnn_model(net_params=net_params)
+  net_fn = zinc_model(net_params=net_params)
   net = hk.transform_with_state(net_fn)
 
   rng, subkey = jax.random.split(rng)
