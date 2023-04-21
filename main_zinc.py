@@ -110,6 +110,11 @@ if __name__ == "__main__":
     pe_func = functools.partial(RWPE, pos_enc_dim=net_params["pos_enc_dim"])
     dataset.add_PE(pe_func, ["pe"])
     print("done")
+    '''if net_params["use_lapeig_loss"]:
+      print("adding lap PE ...", end=" ", flush=True)
+      pe_func = functools.partial(lapPE, pos_enc_dim=net_params["pos_enc_dim"])
+      dataset.add_PE(pe_func, ["eigvec"])
+      print("done")'''
 
   if args.swap_test_val:
     train, val, test = dataset.train, dataset.test, dataset.val
@@ -165,7 +170,7 @@ if __name__ == "__main__":
 
   if net_params['use_lapeig_loss']:
     compute_loss_fn = functools.partial(
-      compute_lapeig_inclusive_loss, net, net_params)
+      compute_lapeig_inclusive_loss, net, net_params, hyper_params['batch_size'])
   else:
     compute_loss_fn = functools.partial(compute_loss, net)
 
@@ -173,7 +178,7 @@ if __name__ == "__main__":
     functools.partial(compute_loss_fn, is_training=True), has_aux=True)
 
   train_epoch_fn = functools.partial(
-      train_epoch, train_loss_and_grad_fn, jax.jit(opt_update), jax.jit(optax.apply_updates), net_params["pe_init"])
+      train_epoch, jax.jit(train_loss_and_grad_fn), jax.jit(opt_update), jax.jit(optax.apply_updates), net_params["pe_init"])
 
   # Rng only used for dropout, not needed for eval
   eval_loss_fn = jax.jit(functools.partial(
@@ -188,7 +193,7 @@ if __name__ == "__main__":
     run = wandb.init(
         project=args.wandb_project,
         entity=args.wandb_entity,
-        name=args.wandb_run_name, config=hyper_params | net_params | {'pe_init':pe_init}, tags=tags,
+        name=args.wandb_run_name, config=hyper_params | net_params | {'pe_init': pe_init}, tags=tags,
         save_code=True)
     commit_id = run._commit
     wandb.config.update({"commit_id": commit_id})

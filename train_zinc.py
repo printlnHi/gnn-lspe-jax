@@ -26,7 +26,7 @@ def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.Stat
   return loss, (loss, state)
 
 
-def compute_lapeig_inclusive_loss(net: hk.TransformedWithState, net_params, params: hk.Params, state: hk.State,
+def compute_lapeig_inclusive_loss(net: hk.TransformedWithState, net_params, batch_size:int, params: hk.Params, state: hk.State,
                                   batch: LabelledGraph, rng: jax.random.KeyArray, is_training: bool) -> Tuple[jnp.ndarray, Tuple[jnp.ndarray, hk.State]]:
 
   graph, label = batch
@@ -44,41 +44,30 @@ def compute_lapeig_inclusive_loss(net: hk.TransformedWithState, net_params, para
   alpha_loss = net_params["alpha_loss"]
   lambda_loss = net_params["lambda_loss"]
   p = graph.nodes['final_p']
-  # p *= node_mask  # For trace this is redundant
+  p *= node_mask[:, None]
   pT = jnp.transpose(p)
 
   L = graphLaplacian(graph, np_=jnp)
   trace = jnp.trace(pT @ L @ p)
 
   graph_indicies = jnp.concatenate([jnp.array([0]), jnp.cumsum(graph.n_node)])
-  # print("<graph_indicies>", graph_indicies, "</graph_indicies>")
-  # print("<L>", L, "</L>")
-  # print("<p>", p, "</p>")
-  # print("<pT>", pT, "</pT>")
-  # print("<trace>", trace, "</trace>")
+  node_indicies = jnp.arange(graph.nodes['feat'].shape[0])
 
-  def body_fun(i, sum_so_far):
-    pMasked = p * (i >= graph_indicies[i]) * (i < graph_indicies[i + 1])
-    from_norm_squared = jnp.sum(jnp.square(
-      jnp.transpose(pMasked) @ pMasked - jnp.eye(pos_enc_dim)))
-    return sum_so_far + from_norm_squared
-  frob_norms_squared_sum = jax.lax.fori_loop(0, num_graphs, body_fun, 0)
-  '''ps = jnp.split(p, graph_indicies)
-  frob_norms_squared = sum(jnp.sum(jnp.square(jnp.transpose(
-    graphP) @ graphP - jnp.eye(pos_enc_dim))) for graphP in ps)
-  frob_norm_squared = jnp.sum(jnp.square(pT @ p - jnp.eye(pos_enc_dim)))
+  def frob_norm_squared(i):
+    mask = (node_indicies >= graph_indicies[i]) * \
+        (node_indicies < graph_indicies[i + 1])
+    pMasked = p * mask[:, None]
+    frob_norm_squared = jnp.sum(jnp.square(
+        jnp.transpose(pMasked) @ pMasked - jnp.eye(pos_enc_dim)))
+    return frob_norm_squared * (i < num_graphs)
 
-  print("<frob_norm_squared>", frob_norm_squared, "</frob_norm_squared>")
-  print("<frob_norms_squared>", frob_norms_squared, "</frob_norms_squared>")
-'''
-
-  '''print("<frob_norms_squared_sum>", frob_norms_squared_sum,
-        "</frob_norms_squared_sum>")'''
+  frob_norms_squared_sum = jnp.sum(jax.lax.map(
+    frob_norm_squared, jnp.arange(batch_size)))
 
   positional_loss = (trace + lambda_loss * frob_norms_squared_sum) / \
       (pos_enc_dim * num_graphs * num_nodes)
-
   loss = task_loss + alpha_loss * positional_loss
+
   return loss, (task_loss, state)
 
 
