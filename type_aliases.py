@@ -20,7 +20,9 @@ MutagTrainFn = Callable[[hk.Params,
 
 TrainResult = Tuple[hk.Params, hk.State, optax.OptState, Metrics]
 
-GraphClassifierFn = Callable[[jraph.GraphsTuple, bool], jnp.ndarray]
+GraphClassifierInput: list[type] = [jraph.GraphsTuple, bool]
+GraphClassifierOutput = Tuple[jnp.ndarray, jraph.GraphsTuple]
+
 
 # TODO: Cleanup unused type aliases, mb rename this file to just be types
 # if not all are aliases

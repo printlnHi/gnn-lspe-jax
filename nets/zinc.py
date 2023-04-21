@@ -10,14 +10,14 @@ import jraph
 from layers.GatedGCNLayer_hk import GatedGCNLayer
 from layers.GatedGCNLSPELayer import GatedGCNLSPELayer
 from layers.mlp_readout_layer import mlp_readout
-from type_aliases import GraphClassifierFn
+from type_aliases import GraphClassifierInput, GraphClassifierOutput
 from utils import HaikuDebug
 
 g_init, g_apply = hk.transform_with_state(GatedGCNLayer)
 
 
 def gnn_model(net_params: Dict[str, Any],
-              debug: bool = False) -> GraphClassifierFn:
+              debug: bool = False) -> Callable[GraphClassifierInput, GraphClassifierOutput]:
   num_atom_type = net_params['num_atom_type']
   num_bond_type = net_params['num_bond_type']
   hidden_dim = net_params['hidden_dim']
@@ -36,7 +36,7 @@ def gnn_model(net_params: Dict[str, Any],
   pos_enc_dim = net_params['pos_enc_dim']
 
   def gated_gcn_net(graph: jraph.GraphsTuple,
-                    is_training: bool) -> jnp.ndarray:
+                    is_training: bool) -> GraphClassifierOutput:
     """A gatedGCN model."""
     nodes, edges, receivers, senders, globals, n_node, n_edge = graph
     sum_n_node = nodes['feat'].shape[0]
