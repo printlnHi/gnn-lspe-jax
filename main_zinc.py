@@ -110,11 +110,6 @@ if __name__ == "__main__":
     pe_func = functools.partial(RWPE, pos_enc_dim=net_params["pos_enc_dim"])
     dataset.add_PE(pe_func, ["pe"])
     print("done")
-    '''if net_params["use_lapeig_loss"]:
-      print("adding lap PE ...", end=" ", flush=True)
-      pe_func = functools.partial(lapPE, pos_enc_dim=net_params["pos_enc_dim"])
-      dataset.add_PE(pe_func, ["eigvec"])
-      print("done")'''
 
   if args.swap_test_val:
     train, val, test = dataset.train, dataset.test, dataset.val
