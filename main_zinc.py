@@ -163,16 +163,20 @@ if __name__ == "__main__":
   # We use min_lr as stopping point rather than a simple floor
   lr_determiner = create_reduce_lr_on_plateau(hyper_params)
 
-  # Delete this comment
+  if net_params['use_lapeig_loss']:
+    compute_loss_fn = functools.partial(compute_lapeig_inclusive_loss, net, net_params)
+  else:
+    compute_loss_fn = functools.partial(compute_loss, net)
+
   train_loss_and_grad_fn = jax.value_and_grad(
-    functools.partial(compute_loss, net, is_training=True), has_aux=True)
+    functools.partial(compute_loss_fn, is_training=True), has_aux=True)
 
   train_epoch_fn = functools.partial(
-      train_epoch, jax.jit(train_loss_and_grad_fn), jax.jit(opt_update), jax.jit(optax.apply_updates), net_params["pe_init"])
+      train_epoch, train_loss_and_grad_fn, jax.jit(opt_update), jax.jit(optax.apply_updates), net_params["pe_init"])
 
   # Rng only used for dropout, not needed for eval
   eval_loss_fn = jax.jit(functools.partial(
-      compute_loss, net, rng=None, is_training=False))
+      compute_loss_fn, rng=None, is_training=False))
 
   # ==================== Training ====================
   if args.wandb:

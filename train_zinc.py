@@ -8,47 +8,78 @@ import jax.numpy as jnp
 import jraph
 import numpy as np
 import optax
+import jax.lax
 
 from type_aliases import LabelledGraph, Metrics, TrainResult
 from utils import graphLaplacian
 
 
 def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.State,
-                 batch: LabelledGraph, rng: jax.random.KeyArray, is_training: bool) -> Tuple[jnp.ndarray, hk.State]:
+                 batch: LabelledGraph, rng: jax.random.KeyArray, is_training: bool) -> Tuple[jnp.ndarray, Tuple[jnp.ndarray, hk.State]]:
   """Compute the loss for a given dataset."""
   graph, label = batch
-  scores, state = net.apply(params, state, rng, graph, is_training=is_training)
+  (scores, _graph), state = net.apply(
+    params, state, rng, graph, is_training=is_training)
   mask = jraph.get_graph_padding_mask(graph)
   # L1 loss
   loss = jnp.sum(jnp.abs(scores - label) * mask) / jnp.sum(mask)
-  return loss, state
+  return loss, (loss, state)
 
 
 def compute_lapeig_inclusive_loss(net: hk.TransformedWithState, net_params, params: hk.Params, state: hk.State,
-                                  batch: LabelledGraph, rng: jax.random.KeyArray, is_training: bool) -> Tuple[jnp.ndarray, hk.State]:
+                                  batch: LabelledGraph, rng: jax.random.KeyArray, is_training: bool) -> Tuple[jnp.ndarray, Tuple[jnp.ndarray, hk.State]]:
+
   graph, label = batch
-  (scores, p), state = net.apply(
-    params, state, rng, graph, is_training=is_training)
+  (scores, graph), state = net.apply(
+      params, state, rng, graph, is_training=is_training)
+
   graph_mask = jraph.get_graph_padding_mask(graph)
   node_mask = jraph.get_node_padding_mask(graph)
-  jraph.get_number_of_padding_with_graphs_edges
   num_graphs = jnp.sum(graph_mask)
   num_nodes = jnp.sum(node_mask)
 
   task_loss = jnp.sum(jnp.abs(scores - label) * graph_mask) / num_graphs
 
-  L = graphLaplacian(graph, np_=jnp)
+  pos_enc_dim = net_params["pos_enc_dim"]
+  alpha_loss = net_params["alpha_loss"]
+  lambda_loss = net_params["lambda_loss"]
+  p = graph.nodes['final_p']
+  # p *= node_mask  # For trace this is redundant
   pT = jnp.transpose(p)
+
+  L = graphLaplacian(graph, np_=jnp)
   trace = jnp.trace(pT @ L @ p)
-  print("L", L)
-  print("p", p)
-  print("trace", trace)
 
-  positional_loss = trace / \
-      (net_params["pos_enc_dim"] * num_graphs * num_nodes)
+  graph_indicies = jnp.concatenate([jnp.array([0]), jnp.cumsum(graph.n_node)])
+  # print("<graph_indicies>", graph_indicies, "</graph_indicies>")
+  # print("<L>", L, "</L>")
+  # print("<p>", p, "</p>")
+  # print("<pT>", pT, "</pT>")
+  # print("<trace>", trace, "</trace>")
 
-  loss = task_loss + net_params['alpha_loss'] * positional_loss
-  return loss, state
+  def body_fun(i, sum_so_far):
+    pMasked = p * (i >= graph_indicies[i]) * (i < graph_indicies[i + 1])
+    from_norm_squared = jnp.sum(jnp.square(
+      jnp.transpose(pMasked) @ pMasked - jnp.eye(pos_enc_dim)))
+    return sum_so_far + from_norm_squared
+  frob_norms_squared_sum = jax.lax.fori_loop(0, num_graphs, body_fun, 0)
+  '''ps = jnp.split(p, graph_indicies)
+  frob_norms_squared = sum(jnp.sum(jnp.square(jnp.transpose(
+    graphP) @ graphP - jnp.eye(pos_enc_dim))) for graphP in ps)
+  frob_norm_squared = jnp.sum(jnp.square(pT @ p - jnp.eye(pos_enc_dim)))
+
+  print("<frob_norm_squared>", frob_norm_squared, "</frob_norm_squared>")
+  print("<frob_norms_squared>", frob_norms_squared, "</frob_norms_squared>")
+'''
+
+  '''print("<frob_norms_squared_sum>", frob_norms_squared_sum,
+        "</frob_norms_squared_sum>")'''
+
+  positional_loss = (trace + lambda_loss * frob_norms_squared_sum) / \
+      (pos_enc_dim * num_graphs * num_nodes)
+
+  loss = task_loss + alpha_loss * positional_loss
+  return loss, (task_loss, state)
 
 
 def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply_updates, pe_init, params: hk.Params, state: hk.State, rng: jax.random.KeyArray,
@@ -57,6 +88,7 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
   epoch_start_time = time.time()
   losses = []
   lengths = []
+  MAEs = []
   loss_and_grad_times = []
   opt_update_times = []
   opt_apply_times = []
@@ -76,7 +108,8 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
       batch[0].nodes['pe'] = batch[0].nodes['pe'] * flip
 
     batch_start = time.time()
-    (loss, state), grads = loss_and_grad_fn(params, state, batch, subkey[1])
+    (loss, (MAE, state)), grads = loss_and_grad_fn(
+      params, state, batch, subkey[1])
     loss_end = time.time()
 
     updates, opt_state = opt_update(grads, opt_state, params)
@@ -86,14 +119,17 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
     opt_end = time.time()
 
     losses.append(loss)
+    MAEs.append(MAE)
     lengths.append(length)
     loss_and_grad_times.append(loss_end - batch_start)
     opt_update_times.append(opt_update_end - loss_end)
     opt_apply_times.append(opt_end - opt_update_end)
 
   losses = jnp.asarray(losses)
+  MAEs = jnp.asarray(MAEs)
   lengths = jnp.asarray(lengths)
   loss = jnp.sum(losses * lengths) / jnp.sum(lengths)
+  MAE = jnp.sum(MAEs * lengths) / jnp.sum(lengths)
 
   loss_and_grad_times = jnp.asarray(loss_and_grad_times)
   opt_update_times = jnp.asarray(opt_update_times)
@@ -107,7 +143,7 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
                          "loss_and_grad_times", "opt_update_times", "opt_apply_times", "total_batch_times", "pre_iter_times"]):
     time_metrics[name[:-1]] = float(jnp.sum(times))
 
-  metrics = {"loss": float(loss)} | time_metrics
+  metrics = {"loss": float(loss), "MAE": float(MAE)} | time_metrics
   return params, state, opt_state, metrics
 
 
@@ -117,18 +153,18 @@ def evaluate_epoch(loss_fn, params: hk.Params,
 
   losses = []
   lengths = []
+  MAEs = []
   for batch, length in ds:
     # State shouldn't change during evaluation
-    #print("=" * 80)
-    loss, _ = loss_fn(params, state, batch)
-    #print(batch[0].nodes['feat'].shape, loss)
-    #print("=" * 80)
-    loss, state_out = loss_fn(params, state, batch)
+    loss, (MAE, state_out) = loss_fn(params, state, batch)
     losses.append(loss)
+    MAEs.append(MAE)
     lengths.append(length)
   losses = jnp.asarray(losses)
+  MAEs = jnp.asarray(MAEs)
   lengths = jnp.asarray(lengths)
   loss = jnp.sum(losses * lengths) / jnp.sum(lengths)
+  MAE = jnp.sum(MAEs * lengths) / jnp.sum(lengths)
 
-  metrics = {"loss": float(loss)}
+  metrics = {"loss": float(loss), "MAE": float(MAE)}
   return metrics

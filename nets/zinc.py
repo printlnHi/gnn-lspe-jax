@@ -33,10 +33,6 @@ def gnn_model(net_params: Dict[str, Any],
   pe_init = net_params['pe_init']
   mask_batch_norm = net_params['mask_batch_norm']
 
-  use_lapeig_loss = net_params['use_lapeig_loss']
-  lambda_loss = net_params['lambda_loss']
-  alpha_loss = net_params['alpha_loss']
-
   pos_enc_dim = net_params['pos_enc_dim']
 
   def gated_gcn_net(graph: jraph.GraphsTuple,
@@ -109,7 +105,7 @@ def gnn_model(net_params: Dict[str, Any],
       p = hk.Linear(pos_enc_dim, name="pe_out")(p)
       p = jraph.segment_normalize(p, graph_indicies, num_segments=num_graphs)
       h = hk.Linear(out_dim, name="Whp")(jnp.concatenate([h, p], axis=1))
-      # TODO: Make P accessible to loss function
+      nodes = nodes | {'final_p': p, 'final_h': h}
 
     # readout
     HaikuDebug("graph_indicies", enable=debug)(graph_indicies)
@@ -125,6 +121,8 @@ def gnn_model(net_params: Dict[str, Any],
     HaikuDebug("hg", enable=debug)(hg)
     mlp_result = mlp_readout(hg, input_dim=out_dim, output_dim=1)
     HaikuDebug("mlp_result", enable=debug)(mlp_result)
-    return jnp.squeeze(mlp_result)
+
+    updated_graph = updated_graph._replace(globals=hg, nodes=nodes)
+    return jnp.squeeze(mlp_result), updated_graph
 
   return gated_gcn_net
