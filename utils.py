@@ -52,7 +52,7 @@ def RWPE(graph: jraph.GraphsTuple, pos_enc_dim: int = 8) -> np.ndarray:
   dim = nodes['feat'].shape[0]
   A = np.zeros((dim, dim))
   A[senders, receivers] = 1
-  D = np.diag(np.sum(A, axis=1))
+  D = np.diag(np.clip(np.sum(A, axis=1), a_min=1, a_max=None))
   RW = A @ np.linalg.inv(D)
   # PE is diagonals of RW, RW^2, ..., RW^pos_enc_dim
   RW_exp = RW
