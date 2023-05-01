@@ -130,9 +130,8 @@ if __name__ == "__main__":
   def padding_strategy(size: GraphsSize) -> GraphsSize:
     padded_size = power_of_two_padding(
         size, batch_size=hyper_params["batch_size"])
-    # TODO: Delete print statement
     if padded_size not in padded_graph_sizes:
-      print(padded_size)
+      print("New padded_size:", padded_size)
     padded_graph_sizes[padded_size] += 1
     return padded_size
 
@@ -175,12 +174,11 @@ if __name__ == "__main__":
   else:
     compute_loss_fn = functools.partial(compute_loss, net)
 
-  train_loss_and_grad_fn = jax.value_and_grad(
-    functools.partial(compute_loss_fn, is_training=True), has_aux=True)
-
   # Rng only used for dropout, not needed for eval
   eval_loss_fn = functools.partial(
     compute_loss_fn, rng=None, is_training=False)
+  train_loss_and_grad_fn = jax.value_and_grad(
+    functools.partial(compute_loss_fn, is_training=True), has_aux=True)
 
   if hyper_params["no_jit"]:
     train_epoch_fn = functools.partial(

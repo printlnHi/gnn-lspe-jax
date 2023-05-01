@@ -61,6 +61,7 @@ if __name__ == "__main__":
   parser.add_argument("--truncate_to", type=int, default=None)
   parser.add_argument("--profile", action="store_true")
   parser.add_argument("--swap_test_val", action="store_true")
+  parser.add_argument("--no_jit", action="store_true")
 
   args = parser.parse_args()
 
@@ -80,6 +81,7 @@ if __name__ == "__main__":
   # development parameters
   hyper_params["truncate_to"] = args.truncate_to
   hyper_params["swap_test_val"] = args.swap_test_val
+  hyper_params["no_jit"] = args.no_jit
 
   # network parameters
   net_params = config["net_params"]
@@ -125,9 +127,8 @@ if __name__ == "__main__":
   def padding_strategy(size: GraphsSize) -> GraphsSize:
     padded_size = power_of_two_padding(
         size, batch_size=hyper_params["batch_size"])
-    # TODO: Delete print statement
     if padded_size not in padded_graph_sizes:
-      print(padded_size)
+      print("New padded_size:", padded_size)
     padded_graph_sizes[padded_size] += 1
     return padded_size
 
@@ -170,15 +171,19 @@ if __name__ == "__main__":
 
   compute_loss_fn = functools.partial(compute_loss, net)
 
+  # Rng only used for dropout, not needed for eval
+  eval_loss_fn = functools.partial(
+    compute_loss_fn, rng=None, is_training=False)
   train_loss_and_grad_fn = jax.value_and_grad(
     functools.partial(compute_loss_fn, is_training=True), has_aux=True)
 
-  train_epoch_fn = functools.partial(
-      train_epoch, jax.jit(train_loss_and_grad_fn), jax.jit(opt_update), jax.jit(optax.apply_updates), net_params["pe_init"])
-
-  # Rng only used for dropout, not needed for eval
-  eval_loss_fn = jax.jit(functools.partial(
-      compute_loss_fn, rng=None, is_training=False))
+  if hyper_params["no_jit"]:
+    train_epoch_fn = functools.partial(
+      train_epoch, train_loss_and_grad_fn, opt_update, optax.apply_updates, net_params["pe_init"])
+  else:
+    train_epoch_fn = functools.partial(
+        train_epoch, jax.jit(train_loss_and_grad_fn), jax.jit(opt_update), jax.jit(optax.apply_updates), net_params["pe_init"])
+    eval_loss_fn = jax.jit(eval_loss_fn)
 
   # ==================== Training ====================
   if args.wandb:

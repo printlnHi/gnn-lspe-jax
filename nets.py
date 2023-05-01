@@ -7,14 +7,12 @@ import numpy as np
 import jraph
 
 # TODO: Should I rename to not be cased like a class?
-from layers.GatedGCNLayer_hk import GatedGCNLayer
+from layers.GatedGCNLayer import GatedGCNLayer
 from layers.GatedGCNLSPELayer import GatedGCNLSPELayer
 from layers.mlp_readout_layer import mlp_readout
 from type_aliases import GraphClassifierInput, GraphClassifierOutput
 from utils import HaikuDebug
 from multi_embedder import MultiEmbedder
-
-g_init, g_apply = hk.transform_with_state(GatedGCNLayer)
 
 
 def gated_gcn_net(net_params, h_encoder, e_encoder, task_out_dim, graph: jraph.GraphsTuple,
