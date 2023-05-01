@@ -8,6 +8,7 @@ import time
 import haiku as hk
 import jax
 from jax.config import config
+import jax.tree_util as tree
 import numpy as np
 import optax
 
@@ -61,6 +62,7 @@ if __name__ == "__main__":
   parser.add_argument("--truncate_to", type=int, default=None)
   parser.add_argument("--profile", action="store_true")
   parser.add_argument("--swap_test_val", action="store_true")
+  parser.add_argument("--no_jit", action="store_true")
 
   args = parser.parse_args()
 
@@ -80,6 +82,7 @@ if __name__ == "__main__":
   # development parameters
   hyper_params["truncate_to"] = args.truncate_to
   hyper_params["swap_test_val"] = args.swap_test_val
+  hyper_params["no_jit"] = args.no_jit
 
   # network parameters
   net_params = config["net_params"]
@@ -152,6 +155,8 @@ if __name__ == "__main__":
   rng, subkey = jax.random.split(rng)
   params, state = net.init(subkey, train[0][0], is_training=True)
   del subkey
+  num_params = tree.tree_reduce(lambda x, p: x + p.size, params, 0)
+  print("Number of parameters: ", num_params)
 
   opt_init, opt_update = create_optimizer_with_learning_rate_hyperparam(
     hyper_params)
@@ -170,12 +175,17 @@ if __name__ == "__main__":
   train_loss_and_grad_fn = jax.value_and_grad(
     functools.partial(compute_loss_fn, is_training=True), has_aux=True)
 
-  train_epoch_fn = functools.partial(
-      train_epoch, jax.jit(train_loss_and_grad_fn), jax.jit(opt_update), jax.jit(optax.apply_updates), net_params["pe_init"])
-
   # Rng only used for dropout, not needed for eval
-  eval_loss_fn = jax.jit(functools.partial(
-      compute_loss_fn, rng=None, is_training=False))
+  eval_loss_fn = functools.partial(
+    compute_loss_fn, rng=None, is_training=False)
+
+  if hyper_params["no_jit"]:
+    train_epoch_fn = functools.partial(
+      train_epoch, train_loss_and_grad_fn, opt_update, optax.apply_updates, net_params["pe_init"])
+  else:
+    train_epoch_fn = functools.partial(
+        train_epoch, jax.jit(train_loss_and_grad_fn), jax.jit(opt_update), jax.jit(optax.apply_updates), net_params["pe_init"])
+    eval_loss_fn = jax.jit(eval_loss_fn)
 
   # ==================== Training ====================
   if args.wandb:
@@ -186,7 +196,7 @@ if __name__ == "__main__":
     run = wandb.init(
         project=args.wandb_project,
         entity=args.wandb_entity,
-        name=args.wandb_run_name, config=hyper_params | net_params | {'pe_init': pe_init}, tags=tags,
+        name=args.wandb_run_name, config=hyper_params | net_params | {'pe_init': pe_init, "params": num_params}, tags=tags,
         save_code=True)
     commit_id = run._commit
     wandb.config.update({"commit_id": commit_id})
