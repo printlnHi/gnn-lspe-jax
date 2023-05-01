@@ -7,8 +7,8 @@ import numpy as np
 
 
 class MoleculeJraphDataset:
-  def __init__(self, train: List[LabelledGraph], test: List[LabelledGraph],
-               val: List[LabelledGraph], atom_feature_dims: List[int], bond_feature_dims: List[int], num_classes: Optional[int] = None):
+  def __init__(self, train: List[LabelledGraph], val: List[LabelledGraph],
+               test: List[LabelledGraph], atom_feature_dims: List[int], bond_feature_dims: List[int], num_classes: Optional[int] = None):
     self.train = train
     self.test = test
     self.val = val
