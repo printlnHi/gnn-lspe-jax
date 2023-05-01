@@ -27,19 +27,15 @@ def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.Stat
 
   (scores, _graph), state = net.apply(
     params, state, rng, graph, is_training=is_training)
-  # print(f"<mask ({mask.shape})>", mask, "</mask>")
-  # print(f"<not_nan ({not_nan.shape})>", not_nan, "</not_nan>")
-  # print(f"<combined_mask ({combined_mask.shape})>",combined_mask, "</combined_mask>")
-  # print(f"<scores ({scores.shape})>", scores, "</scores>")
-  # print(f"<label ({label.shape})>)", label, "</label>")
   sigmoid_scores = jax.nn.sigmoid(scores)
-  losses = zeroed_label * jnp.log(sigmoid_scores) + \
-      (1 - zeroed_label) * jnp.log(1 - sigmoid_scores)
-  # print(f"<losses ({losses.shape})>", losses, "</losses>")
+  losses_old = - (zeroed_label * jnp.log(sigmoid_scores) +
+                  (1 - zeroed_label) * jnp.log(1 - sigmoid_scores))
+  M = -(jnp.clip(scores, a_max=0))
+  losses = scores - scores * zeroed_label + M + \
+      jnp.log(jnp.exp(-M) + jnp.exp(-scores - M))
   losses *= combined_mask
-  # print(f"<masked losses ({losses.shape})>", losses, "</masked losses>")
-  loss = -jnp.sum(losses) / jnp.sum(combined_mask)
-  # print(f"<loss ({loss.shape})>", loss, "</loss>")
+  loss = jnp.sum(losses) / jnp.sum(combined_mask)
+
   return loss, ((label, scores, combined_mask), state)
 
 
@@ -71,8 +67,6 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
   dataset_time = time.time() - epoch_start_time
 
   for (batch, length), subkey in zip(batches, subkeys):
-    # As we've already produced the whole dataset time between iterations is
-    # negligible
     if pe_init == "lap_pe":
       flip = jax.random.bernoulli(
           subkey[0], shape=batch[0].nodes['pe'].shape) * 2 - 1
