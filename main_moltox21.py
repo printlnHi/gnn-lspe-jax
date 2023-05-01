@@ -1,23 +1,26 @@
 import argparse
-from collections import Counter
 import functools
 import json
 import os
 import time
+from collections import Counter
 
 import haiku as hk
 import jax
-from jax.config import config
+import jax.tree_util as tree
 import jraph
 import numpy as np
 import optax
+from jax.config import config
 
 import datasets
 import wandb
 from nets import moltox21_model
-from train_moltox21 import train_epoch, evaluate_epoch, compute_loss, compute_lapeig_inclusive_loss
-from utils import power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader, lapPE, RWPE
-from optimization import create_optimizer_with_learning_rate_hyperparam, create_reduce_lr_on_plateau
+from optimization import (create_optimizer_with_learning_rate_hyperparam,
+                          create_reduce_lr_on_plateau)
+from train_moltox21 import compute_loss, evaluate_epoch, train_epoch
+from utils import (RWPE, GraphsSize, PaddingScheme, flat_data_loader, lapPE,
+                   power_of_two_padding)
 
 if __name__ == "__main__":
 
@@ -154,6 +157,9 @@ if __name__ == "__main__":
   print("done")
   del subkey
 
+  num_params = tree.tree_reduce(lambda x, p: x + p.size, params, 0)
+  print("Number of parameters: ", num_params)
+
   opt_init, opt_update = create_optimizer_with_learning_rate_hyperparam(
     hyper_params)
   opt_state = opt_init(params)
@@ -162,11 +168,7 @@ if __name__ == "__main__":
   # We use min_lr as stopping point rather than a simple floor
   lr_determiner = create_reduce_lr_on_plateau(hyper_params)
 
-  if net_params['use_lapeig_loss']:
-    compute_loss_fn = functools.partial(
-      compute_lapeig_inclusive_loss, net, net_params, hyper_params['batch_size'])
-  else:
-    compute_loss_fn = functools.partial(compute_loss, net)
+  compute_loss_fn = functools.partial(compute_loss, net)
 
   train_loss_and_grad_fn = jax.value_and_grad(
     functools.partial(compute_loss_fn, is_training=True), has_aux=True)

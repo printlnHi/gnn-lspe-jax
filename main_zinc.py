@@ -1,23 +1,26 @@
 import argparse
-from collections import Counter
 import functools
 import json
 import os
 import time
+from collections import Counter
 
 import haiku as hk
 import jax
-from jax.config import config
 import jax.tree_util as tree
 import numpy as np
 import optax
+from jax.config import config
 
 import datasets
 import wandb
 from nets import zinc_model
-from train_zinc import train_epoch, evaluate_epoch, compute_loss, compute_lapeig_inclusive_loss
-from utils import power_of_two_padding, GraphsSize, PaddingScheme, flat_data_loader, lapPE, RWPE
-from optimization import create_optimizer_with_learning_rate_hyperparam, create_reduce_lr_on_plateau
+from optimization import (create_optimizer_with_learning_rate_hyperparam,
+                          create_reduce_lr_on_plateau)
+from train_zinc import (compute_lapeig_inclusive_loss, compute_loss,
+                        evaluate_epoch, train_epoch)
+from utils import (RWPE, GraphsSize, PaddingScheme, flat_data_loader, lapPE,
+                   power_of_two_padding)
 
 if __name__ == "__main__":
   # config.update("jax_log_compiles", True)
