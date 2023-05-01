@@ -188,7 +188,8 @@ if __name__ == "__main__":
     run = wandb.init(
         project=args.wandb_project,
         entity=args.wandb_entity,
-        name=args.wandb_run_name, config=hyper_params | net_params | {'pe_init': pe_init}, tags=tags,
+        name=args.wandb_run_name, config=hyper_params | net_params | {
+          'pe_init': pe_init},
         save_code=True)
     commit_id = run._commit
     wandb.config.update({"commit_id": commit_id})

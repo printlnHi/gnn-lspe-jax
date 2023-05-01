@@ -40,8 +40,6 @@ def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.Stat
   # print(f"<masked losses ({losses.shape})>", losses, "</masked losses>")
   loss = -jnp.sum(losses) / jnp.sum(combined_mask)
   # print(f"<loss ({loss.shape})>", loss, "</loss>")
-  # TODO: Calculate ROC-AUC
-  ROC_AUC = loss
   return loss, ((label, scores, combined_mask), state)
 
 
@@ -53,51 +51,6 @@ def roc_auc(label, scores, mask):
       rocauc_list.append(roc_auc_score(
         label[submask, i], scores[submask, i]))
   return np.mean(rocauc_list)
-
-
-def compute_lapeig_inclusive_loss(net: hk.TransformedWithState, net_params, batch_size: int, params: hk.Params, state: hk.State,
-                                  batch: LabelledGraph, rng: jax.random.KeyArray, is_training: bool) -> Tuple[jnp.ndarray, Tuple[jnp.ndarray, hk.State]]:
-
-  graph, label = batch
-  (scores, graph), state = net.apply(
-      params, state, rng, graph, is_training=is_training)
-
-  graph_mask = jraph.get_graph_padding_mask(graph)
-  node_mask = jraph.get_node_padding_mask(graph)
-  num_graphs = jnp.sum(graph_mask)
-  num_nodes = jnp.sum(node_mask)
-
-  task_loss = jnp.sum(jnp.abs(scores - label) * graph_mask) / num_graphs
-
-  pos_enc_dim = net_params["pos_enc_dim"]
-  alpha_loss = net_params["alpha_loss"]
-  lambda_loss = net_params["lambda_loss"]
-  p = graph.nodes['final_p']
-  p *= node_mask[:, None]
-  pT = jnp.transpose(p)
-
-  L = graphLaplacian(graph, np_=jnp)
-  trace = jnp.trace(pT @ L @ p)
-
-  graph_indicies = jnp.concatenate([jnp.array([0]), jnp.cumsum(graph.n_node)])
-  node_indicies = jnp.arange(graph.nodes['feat'].shape[0])
-
-  def frob_norm_squared(i):
-    mask = (node_indicies >= graph_indicies[i]) * \
-        (node_indicies < graph_indicies[i + 1])
-    pMasked = p * mask[:, None]
-    frob_norm_squared = jnp.sum(jnp.square(
-        jnp.transpose(pMasked) @ pMasked - jnp.eye(pos_enc_dim)))
-    return frob_norm_squared * (i < num_graphs)
-
-  frob_norms_squared_sum = jnp.sum(jax.lax.map(
-    frob_norm_squared, jnp.arange(batch_size)))
-
-  positional_loss = (trace + lambda_loss * frob_norms_squared_sum) / \
-      (pos_enc_dim * num_graphs * num_nodes)
-  loss = task_loss + alpha_loss * positional_loss
-
-  return loss, (task_loss, state)
 
 
 def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply_updates, pe_init, params: hk.Params, state: hk.State, rng: jax.random.KeyArray,
