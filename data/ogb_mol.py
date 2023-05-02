@@ -9,7 +9,6 @@ from ogb.graphproppred import DglGraphPropPredDataset, Evaluator
 from scipy import sparse as sp
 import numpy as np
 import networkx as nx
-from tqdm import tqdm
 
 
 class OGBMOLDGL(torch.utils.data.Dataset):
