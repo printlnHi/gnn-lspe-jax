@@ -2,15 +2,10 @@ name: gnn-lspe-jax
 dependencies:
  - python=3.9
  - pip
- - matplotlib
  - scipy
-# - conda-forge::optax 
-## Jax version 0.3.24 required until 0.0.9 haiku becomes available via Conda, as removal of jax_experimental_name_stack in 0.3.25 causes issues
-# - conda-forge::jax=0.3.24
  - numpy=1.22
  - conda-forge::wandb
  - pytorch # Pytorch and dgl are for dataset loading
-#- tensorflow # TODO - install GPU on Linux
  - pip:
    - jraph
    - dm-haiku
