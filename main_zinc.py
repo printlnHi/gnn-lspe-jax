@@ -10,7 +10,6 @@ import jax
 import jax.tree_util as tree
 import numpy as np
 import optax
-from jax.config import config
 
 import datasets
 import wandb
@@ -23,16 +22,6 @@ from utils import (RWPE, GraphsSize, PaddingScheme, flat_data_loader, lapPE,
                    power_of_two_padding)
 
 if __name__ == "__main__":
-  # config.update("jax_log_compiles", True)
-  '''
-  import logging
-  logging.getLogger("jax").setLevel(logging.DEBUG)
-  '''
-
-  print("jax backend:", jax.lib.xla_bridge.get_backend().platform)
-  print("jax devices:", jax.devices())
-  print()
-
   # ==================== Load parameters ====================
   # Parameters are loaded from config and can be overwritten from command line
 
@@ -66,6 +55,7 @@ if __name__ == "__main__":
   parser.add_argument("--profile", action="store_true")
   parser.add_argument("--swap_test_val", action="store_true")
   parser.add_argument("--no_jit", action="store_true")
+  parser.add_argument("--enable_x64", action="store_true")
 
   args = parser.parse_args()
 
@@ -86,6 +76,7 @@ if __name__ == "__main__":
   hyper_params["truncate_to"] = args.truncate_to
   hyper_params["swap_test_val"] = args.swap_test_val
   hyper_params["no_jit"] = args.no_jit
+  hyper_params["enable_x64"] = args.enable_x64
 
   # network parameters
   net_params = config["net_params"]
@@ -99,6 +90,18 @@ if __name__ == "__main__":
   elif args.graph_norm:
     net_params["graph_norm"] = True
 
+  # ================= JAX startup ==================
+  '''
+  import logging
+  logging.getLogger("jax").setLevel(logging.DEBUG)
+  '''
+  if hyper_params["enable_x64"]:
+    jax.config.update("jax_enable_x64", True)
+  # config.update("jax_log_compiles", True)
+
+  print("jax backend:", jax.lib.xla_bridge.get_backend().platform)
+  print("jax devices:", jax.devices())
+  print()
   # ==================== Data ====================
   dataset = datasets.zinc()
   task_dims = dataset.task_dims()
