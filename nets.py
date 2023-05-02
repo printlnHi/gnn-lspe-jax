@@ -27,6 +27,7 @@ def gated_gcn_net(net_params, h_encoder, e_encoder, task_out_dim, graph: jraph.G
   residual = net_params['residual']
   pe_init = net_params['pe_init']
   mask_batch_norm = net_params['mask_batch_norm']
+  weight_on_edges = net_params['weight_on_edges']
 
   pos_enc_dim = net_params['pos_enc_dim']
   """A gatedGCN model."""
@@ -64,7 +65,7 @@ def gated_gcn_net(net_params, h_encoder, e_encoder, task_out_dim, graph: jraph.G
       globals=globals)
 
   layer_args = {'output_dim': hidden_dim, 'residual': residual,
-                'dropout': dropout, 'mask_batch_norm': mask_batch_norm, 'graph_norm': graph_norm}
+                'dropout': dropout, 'mask_batch_norm': mask_batch_norm, 'graph_norm': graph_norm, 'weight_on_edges': weight_on_edges}
   final_layer_args = layer_args | {'output_dim': out_dim}
 
   HaikuDebug("before_layers_updated_graph", enable=debug)(updated_graph)
