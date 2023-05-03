@@ -22,6 +22,8 @@ fixed_args=(
   "--config configs/GatedGCN_ZINC_withLapEigLoss.json"
 )
 
+seeds = (0 1 2 3)
+
 wandb_run_name_suffix=""
 connect_to_wandb=0
 
@@ -53,6 +55,9 @@ for i in "${!fixed_wandb_run_names[@]}"; do
   if [ $connect_to_wandb -eq 1 ]; then
     arg="$arg --wandb_run_name=${fixed_wandb_run_names[i]}$wandb_run_name_suffix --wandb"
   fi
-  echo "Running ${program} $arg"
-  python $program $arg
+  echo "Running ${program} $arg with seeds ${seeds[@]}"
+  for seed in "${seeds[@]}"; do
+    echo "Running ${program} $arg with seed ${seed}"
+    python $program --seed=${seed} $arg
+  done
 done
