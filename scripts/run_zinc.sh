@@ -22,7 +22,7 @@ fixed_args=(
   "--config configs/GatedGCN_ZINC_withLapEigLoss.json"
 )
 
-seeds = (0 1 2 3)
+seeds=(0 1 2 3)
 
 wandb_run_name_suffix=""
 connect_to_wandb=0
