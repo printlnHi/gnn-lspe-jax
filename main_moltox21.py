@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
   print("jax backend:", jax.lib.xla_bridge.get_backend().platform)
   print("jax devices:", jax.devices())
-  print() 
+  print()
   # ==================== Data ====================
   dataset = datasets.moltox21()
   task_dims = dataset.task_dims()
