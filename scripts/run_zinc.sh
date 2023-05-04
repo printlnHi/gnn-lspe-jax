@@ -19,7 +19,7 @@ fixed_args=(
   "--config configs/GatedGCN_ZINC_NoPE.json"
   "--config configs/GatedGCN_ZINC_LapPE.json"
   "--config configs/GatedGCN_ZINC_LSPE.json"
-  "--config configs/GatedGCN_ZINC_withLapEigLoss.json"
+  "--config configs/GatedGCN_ZINC_LSPE_withLapEigLoss.json"
 )
 
 seeds=(0 1 2 3)
