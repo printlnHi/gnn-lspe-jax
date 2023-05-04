@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-exclude_files=("./data/molecules.py" "./data/ogb_mol.py" "./notebook.py")
+exclude_files=("./data/molecules.py" "./data/ogb_mol.py" "./notebook.py" "./wandb/*")
 exclusions=$(printf "-o -path %s " $exclude_files)
 #TODO: Count jupyter notebook
 

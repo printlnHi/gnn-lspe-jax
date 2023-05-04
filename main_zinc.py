@@ -57,6 +57,7 @@ if __name__ == "__main__":
   parser.add_argument("--swap_test_val", action="store_true")
   parser.add_argument("--no_jit", action="store_true")
   parser.add_argument("--enable_x64", action="store_true")
+  parser.add_argument("--inspect_model", action="store_true")
 
   args = parser.parse_args()
 
@@ -160,10 +161,17 @@ if __name__ == "__main__":
   net = hk.transform_with_state(net_fn)
 
   rng, subkey = jax.random.split(rng)
+  print("Initializing network ...", end=" ", flush=True)
   params, state = net.init(subkey, train[0][0], is_training=True)
   del subkey
+  print("done.")
   num_params = tree.tree_reduce(lambda x, p: x + p.size, params, 0)
   print("Number of parameters: ", num_params)
+  if args.inspect_model:
+    print(hk.experimental.tabulate(functools.partial(
+      net_fn, is_training=True))(train[0][0]))
+    for name, param in params.leaves():
+      print(name, param.size, param.shape)
 
   opt_init, opt_update = create_optimizer_with_learning_rate_hyperparam(
     hyper_params)
