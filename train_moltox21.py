@@ -10,7 +10,7 @@ import numpy as np
 import optax
 import jax.lax
 
-from type_aliases import LabelledGraph, Metrics, TrainResult
+from types_and_aliases import LabelledGraph, Metrics, TrainResult, LoadedData
 from utils import graphLaplacian
 
 from sklearn.metrics import roc_auc_score
@@ -50,7 +50,7 @@ def roc_auc(label, scores, mask):
 
 
 def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply_updates, pe_init, params: hk.Params, state: hk.State, rng: jax.random.KeyArray,
-                opt_state: optax.OptState, dataloader) -> TrainResult:
+                opt_state: optax.OptState, dataloader: Callable[[jax.random.KeyArray], LoadedData]) -> TrainResult:
   """Train for one epoch."""
   epoch_start_time = time.time()
   losses = []
@@ -131,8 +131,7 @@ def find_differences(tree1, tree2):
   return diff_tree
 
 
-def evaluate_epoch(loss_fn, params: hk.Params,
-                   state: hk.State, ds: Iterable[Tuple[LabelledGraph, int]]) -> Metrics:
+def evaluate_epoch(loss_fn, params: hk.Params, state: hk.State, ds: LoadedData) -> Metrics:
   """Evaluate for one epoch."""
 
   losses = []

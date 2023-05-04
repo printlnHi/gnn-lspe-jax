@@ -7,8 +7,8 @@ import jax.numpy as jnp
 import jraph
 import optax
 
-from type_aliases import (MutagEvaluateFn, Metrics, MutagTrainFn,
-                          MutagTrainResult, LabelledGraph)
+from types_and_aliases import (MutagEvaluateFn, Metrics, MutagTrainFn,
+                               MutagTrainResult, LabelledGraph)
 
 
 def compute_loss(net: hk.Transformed, params: hk.Params, graph: jraph.GraphsTuple, label: jnp.ndarray,

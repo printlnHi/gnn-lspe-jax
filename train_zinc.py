@@ -10,7 +10,7 @@ import numpy as np
 import optax
 import jax.lax
 
-from type_aliases import LabelledGraph, Metrics, TrainResult
+from types_and_aliases import LabelledGraph, Metrics, TrainResult, LoadedData
 from utils import graphLaplacian
 
 
@@ -26,7 +26,7 @@ def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.Stat
   return loss, (loss, state)
 
 
-def compute_lapeig_inclusive_loss(net: hk.TransformedWithState, net_params, batch_size:int, params: hk.Params, state: hk.State,
+def compute_lapeig_inclusive_loss(net: hk.TransformedWithState, net_params, batch_size: int, params: hk.Params, state: hk.State,
                                   batch: LabelledGraph, rng: jax.random.KeyArray, is_training: bool) -> Tuple[jnp.ndarray, Tuple[jnp.ndarray, hk.State]]:
 
   graph, label = batch
@@ -72,7 +72,7 @@ def compute_lapeig_inclusive_loss(net: hk.TransformedWithState, net_params, batc
 
 
 def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply_updates, pe_init, params: hk.Params, state: hk.State, rng: jax.random.KeyArray,
-                opt_state: optax.OptState, dataloader) -> TrainResult:
+                opt_state: optax.OptState, dataloader: Callable[[jax.random.KeyArray], LoadedData]) -> TrainResult:
   """Train for one epoch."""
   epoch_start_time = time.time()
   losses = []
@@ -136,8 +136,7 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
   return params, state, opt_state, metrics
 
 
-def evaluate_epoch(loss_fn, params: hk.Params,
-                   state: hk.State, ds: Iterable[LabelledGraph]) -> Metrics:
+def evaluate_epoch(loss_fn, params: hk.Params, state: hk.State, ds: LoadedData) -> Metrics:
   """Evaluate for one epoch."""
 
   losses = []

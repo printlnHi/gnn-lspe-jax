@@ -10,7 +10,7 @@ import jraph
 import numpy as np
 import optax
 
-from type_aliases import LabelledGraph
+from types_and_aliases import LabelledGraph
 
 GraphsSize = NewType("GraphsSize", Tuple[int, int, int])
 # TODO: Consider deleting this
@@ -201,6 +201,7 @@ class HaikuDebug(hk.Module):
     if self.enable:
       print(f"<{self.label}> {x} </{self.label}>")
 
+
 def compare_elements(x, y):
   return (jnp.equal(x, y)) | (jnp.isnan(x) & jnp.isnan(y))
 
@@ -217,4 +218,3 @@ def find_differences(tree1, tree2):
   diff_tree = jax.tree_util.tree_unflatten(treedef1, diff_flat_tree)
 
   return diff_tree
-

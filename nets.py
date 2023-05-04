@@ -10,7 +10,7 @@ import jraph
 from layers.GatedGCNLayer import GatedGCNLayer
 from layers.GatedGCNLSPELayer import GatedGCNLSPELayer
 from layers.mlp_readout_layer import mlp_readout
-from type_aliases import GraphClassifierInput, GraphClassifierOutput
+from types_and_aliases import GraphClassifierInput, GraphClassifierOutput
 from utils import HaikuDebug
 from multi_embedder import MultiEmbedder
 

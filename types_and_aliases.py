@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 import haiku as hk
 import jax
@@ -23,6 +23,5 @@ TrainResult = Tuple[hk.Params, hk.State, optax.OptState, Metrics]
 GraphClassifierInput: list[type] = [jraph.GraphsTuple, bool]
 GraphClassifierOutput = Tuple[jnp.ndarray, jraph.GraphsTuple]
 
-
-# TODO: Cleanup unused type aliases, mb rename this file to just be types
-# if not all are aliases
+LoadedData = Iterable[Tuple[LabelledGraph, int]]
+# TODO: Cleanup unused type aliases

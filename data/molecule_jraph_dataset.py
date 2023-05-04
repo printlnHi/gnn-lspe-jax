@@ -1,7 +1,7 @@
 import functools
 from typing import Any, Callable, Optional, Tuple, List, Union
 
-from type_aliases import LabelledGraph
+from types_and_aliases import LabelledGraph
 import jax.numpy as jnp
 import numpy as np
 
