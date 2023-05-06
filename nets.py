@@ -6,12 +6,11 @@ import jax.numpy as jnp
 import jraph
 import numpy as np
 
-# TODO: Should I rename to not be cased like a class?
-from layers.GatedGCNLayer import GatedGCNLayer
-from layers.GatedGCNLSPELayer import GatedGCNLSPELayer
-from layers.mlp_readout_layer import mlp_readout
+from modules.gatedgcn import GatedGCNLayer
+from modules.gatedgcn_lspe import GatedGCNLSPELayer
+from modules.mlp_readout import MLPReadout
 from lib.debug import HaikuDebug
-from multi_embedder import MultiEmbedder
+from modules.multi_embedder import MultiEmbedder
 from types_and_aliases import GraphClassifierInput, GraphClassifierOutput
 
 
@@ -111,7 +110,7 @@ def gated_gcn_net(net_params, h_encoder, e_encoder, task_out_dim, graph: jraph.G
     hg = jraph.segment_mean(h, graph_indicies, num_segments=num_graphs)
   hg = jnp.nan_to_num(hg)
   HaikuDebug("hg", enable=debug)(hg)
-  mlp_result = mlp_readout(hg, input_dim=out_dim, output_dim=task_out_dim)
+  mlp_result = MLPReadout(input_dim=out_dim, output_dim=task_out_dim)(hg)
   HaikuDebug("mlp_result", enable=debug)(mlp_result)
 
   updated_graph = updated_graph._replace(globals=hg, nodes=nodes)
