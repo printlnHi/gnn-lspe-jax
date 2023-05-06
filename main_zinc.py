@@ -51,7 +51,7 @@ if __name__ == "__main__":
   parser.add_argument("--in_feat_dropout", type=float)
   parser.add_argument("--no_graph_norm", action="store_true")
   parser.add_argument("--graph_norm", action="store_true")
-  parser.add_argument("--no_weight_on_edges", action="store_true")
+  parser.add_argument("--weight_on_edges", action="store_true")
   # Development parameters
   parser.add_argument("--truncate_to", type=int, default=None)
   parser.add_argument("--profile", action="store_true")
@@ -86,7 +86,7 @@ if __name__ == "__main__":
   if args.pe_init:
     net_params["pe_init"] = args.pe_init
   net_params["mask_batch_norm"] = not args.no_mask_batch_norm
-  net_params["weight_on_edges"] = not args.no_weight_on_edges
+  net_params["weight_on_edges"] = args.weight_on_edges
   if args.no_graph_norm and args.graph_norm:
     raise ValueError("Cannot override graph norm to be both true and false")
   elif args.no_graph_norm:

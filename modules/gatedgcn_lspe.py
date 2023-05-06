@@ -12,7 +12,7 @@ from lib.debug import HaikuDebug
 
 class GatedGCNLSPELayer(hk.Module):
 
-  def __init__(self, output_dim, weight_on_edges=True,
+  def __init__(self, output_dim, weight_on_edges=False,
                residual=True, dropout=0.0, mask_batch_norm=True, graph_norm=True, debug=False, name: Optional[str] = None):
     super().__init__(name=name)
     self.output_dim = output_dim
