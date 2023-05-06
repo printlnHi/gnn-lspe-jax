@@ -31,46 +31,6 @@ def create_lr_exponential_decay(hyper_params: Dict[str, Any]) -> optax.Schedule:
   return lr
 
 
-'''MetaState = chex.ArrayTree
-
-
-class MetaTransformInitFn(typing_extensions.Protocol):
-  """A pure function that initializes the MetaSate."""
-
-  def __call__(self, *args, **kwargs) -> MetaState:
-    """Initializes the MetaState
-
-    Args:
-      args: Arguments to the initialization function.
-      kwargs: Keyword arguments to the initialization function.
-    Returns:
-      The initialized MetaState
-    """
-
-
-class MetaTransformUpdateFn(typing_extensions.Protocol):
-  """A pure function that transforms the OptState and updates the MetaState"""
-
-  def __call__(self, metaState: MetaState, optaxState: optax.OptState, *args, **kwargs) -> Tuple[MetaState, optax.OptState]:
-    """Updates the OptState
-
-    Args:
-      metaState: The MetaState
-      optaxState: The optax.OptState
-      args: Arguments to the update function.
-      kwargs: Keyword arguments to the update function.
-
-    Returns:
-      The updated MetaState
-    """
-
-
-class MetaTransformation(NamedTuple):
-  """A pair of pure functions implementing a transformation on the optimizer state."""
-  init: MetaTransformInitFn
-  update: MetaTransformUpdateFn'''
-
-
 class ReduceLROnPlateau(object):
   def __init__(self, init_lr: float, reduce: float = 0.5, patience: int = 10, min_lr: float = 0):
     self.reduce = reduce
@@ -103,21 +63,3 @@ def create_reduce_lr_on_plateau(hyper_params: Dict[str, Any]) -> Callable[[float
   # We use min_lr as stopping point rather than a simple floor
   return ReduceLROnPlateau(
     hyper_params["init_lr"], hyper_params["lr_reduce_factor"], hyper_params["lr_schedule_patience"], min_lr=0)
-
-
-'''def create_optimizer_and_lr_tracker(hyper_params: Dict[str, Any]) -> Tuple[optax.GradientTransformation, Callable[[float, optax.OptState], optax.OptState]]:
-  optimizer = optax.inject_hyperparams(optax.adamw)(
-    learning_rate=hyper_params["init_lr"], weight_decay=hyper_params["weight_decay"])
-  print(hyper_params['min_lr'])
-  reduceOnPlateau = ReduceLROnPlateau(
-    hyper_params["init_lr"], hyper_params["lr_reduce_factor"], hyper_params["lr_schedule_patience"], hyper_params["min_lr"])
-
-  def tracker(score, opt_state):
-    opt_state.hyperparams['learning_rate'] = reduceOnPlateau.step(score)
-    return opt_state
-
-  return optimizer, tracker
-
-
-optax.GradientTransformation
-optax.chain'''
