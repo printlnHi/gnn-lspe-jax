@@ -1,13 +1,17 @@
 #!/bin/bash
-# Bash script to run all of the moltox21 experiments by calling main_moltox21.py
-# Calling convention: bash run_moltox21.sh repo_dir [--wandb_run_name_suffix string] [--wandb] [--|--verbatim_args <args>*]
+
+# Run an experiment on the MOLTox21 task across all Positional Embeddings
+# Calling convention: moltox21_experiment.sh repo_dir [--wandb_run_name_suffix string] [--wandb] [--min_seed=0] [--max_seed=3] [--|--verbatim_args <args>*]
+# Args after -- or --verbatim_args are passed verbatim to main_moltox21.py
+
 set -e # Exit on single error
 
 repo_dir=$1
 shift
 
 cd "${repo_dir}"
-program="main_moltox21.py"
+source scripts/run_functions.sh
+
 fixed_wandb_run_names=(
   "NoPE"
   "LapPE"
@@ -20,10 +24,11 @@ fixed_args=(
   "--config configs/GatedGCN_MOLTOX21_LSPE.json"
 )
 
-seeds=(0 1 2 3)
 
 wandb_run_name_suffix=""
 connect_to_wandb=0
+min_seed=0
+max_seed=3
 
 while true; do
   case $1 in
@@ -35,8 +40,19 @@ while true; do
       connect_to_wandb=1
       shift
       ;;
+    --min_seed)
+      min_seed=$2
+      shift 2
+      ;;
+    --max_seed)
+      max_seed=$2
+      shift 2
+      ;;
     --|--verbatim_args)
       shift
+      break
+      ;;
+    "")
       break
       ;;
     *)
@@ -49,13 +65,9 @@ done
 verbatim="$@"
 
 for i in "${!fixed_wandb_run_names[@]}"; do
-  arg=" $verbatim ${fixed_args[i]}"
+  arg="$verbatim ${fixed_args[i]}"
   if [ $connect_to_wandb -eq 1 ]; then
     arg="$arg --wandb_run_name=${fixed_wandb_run_names[i]}$wandb_run_name_suffix --wandb"
   fi
-  echo "Running ${program} $arg with seeds ${seeds[@]}"
-  for seed in "${seeds[@]}"; do
-    echo "Running ${program} $arg with seed ${seed}"
-    python $program --seed=${seed} $arg
-  done
+  moltox21_multi_run "$min_seed" "$max_seed" "$arg"
 done
