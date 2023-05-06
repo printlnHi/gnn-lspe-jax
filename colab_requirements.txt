@@ -1,0 +1,6 @@
+chex == 0.1.5
+dm-haiku
+jraph
+wandb
+dgl == 0.9.1
+ogb == 1.3.1
