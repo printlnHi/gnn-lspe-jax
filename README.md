@@ -43,7 +43,7 @@ python convert_datasets.py
 Notebooks are provided for easy replication, iteration and adaption of the experiments. By default, they log their results via Weights and Biases.
 To replicate the results of Dwivedi et al. (2021), run the `DwivediReplication.ipynb` notebook. For each (architecture,task) pair it will train and evaluate the model for seeds 0 through to 3.
 To replicate further experimental results I cite in my Part II project, run the `FurtherExperiments.ipynb` notebook.
-`InspectSplit.ipynb` is provided to allow each inspection of the train/val/test split of the ZINC and Moltox21 dataset.
+`InspectData.ipynb` is provided to allow for easy inspection of the train/val/test split of the ZINC and Moltox21 dataset.
 
 ## Individual runs:
 The following three examples are for ZINC but can be trivially adapted to Moltox21
