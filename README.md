@@ -1,12 +1,15 @@
 # GNN-LSPE-JAX
 First and foremost, this is a replication of Dwivedi et al. (2021) (arXiv:2110.07875).
-Their original PyTorch codebase can found at https://github.com/vijaydwivedi75/gnn-lspe
-The following files are either directories copies or reduced versions rom the original codebase, which is under a MIT license, for the purposes of dataset conversion:
- - data/molecules/*.index
- - data/molecules.py
- - data/ogb_mol.py
-The files of configs/ are a slightly modified strict subset of the original config files.
+Their original PyTorch codebase can found at https://github.com/vijaydwivedi75/gnn-lspe, and is released under a MIT license (as of 06-May-2023).
 This replication is restricted to the GatedGCN layer and the ZINC and Moltox21 datasets. 
+
+Some files in this repository are either direct or modified copies from the aforementioned codebase, and are marked as such by a LICENSE file in the containing directory. Copyright belongs to the original authors.
+
+Directories of copied files:
+ - data/
+ - configs/
+
+The files of configs/ are a slightly modified subset of the original config files.
 
 # Replication
 ## Environment

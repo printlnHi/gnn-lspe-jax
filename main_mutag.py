@@ -8,15 +8,60 @@ import jax.numpy as jnp
 import datasets
 import wandb
 from lib.optimization import create_optimizer
-from nets.mutag import net_fn
 from train_mutag import get_trainer_evaluator
+
+# Adapted from https://github.com/deepmind/educational/blob/master/colabs/summer_schools/intro_to_graph_nets_tutorial_with_jraph.ipynb
+import jax
+import jraph
+import jax.numpy as jnp
+import haiku as hk
+
+
+@jraph.concatenated_args
+def edge_update_fn(feats: jnp.ndarray) -> jnp.ndarray:
+  """Edge update function for graph net."""
+  net = hk.Sequential(
+      [hk.Linear(128), jax.nn.relu,
+       hk.Linear(128)])
+  return net(feats)
+
+
+@jraph.concatenated_args
+def node_update_fn(feats: jnp.ndarray) -> jnp.ndarray:
+  """Node update function for graph net."""
+  net = hk.Sequential(
+      [hk.Linear(128), jax.nn.relu,
+       hk.Linear(128)])
+  return net(feats)
+
+
+@jraph.concatenated_args
+def update_global_fn(feats: jnp.ndarray) -> jnp.ndarray:
+  """Global update function for graph net."""
+  # MUTAG is a binary classification task, so output pos neg logits.
+  net = hk.Sequential(
+      [hk.Linear(128), jax.nn.relu,
+       hk.Linear(2)])
+  return net(feats)
+
+
+def net_fn(graph: jraph.GraphsTuple) -> jraph.GraphsTuple:
+  # Add a global paramater for graph classification.
+  graph = graph._replace(globals=jnp.zeros([graph.n_node.shape[0], 1]))
+  embedder = jraph.GraphMapFeatures(
+      hk.Linear(128), hk.Linear(128), hk.Linear(128))
+  net = jraph.GraphNetwork(
+      update_node_fn=node_update_fn,
+      update_edge_fn=edge_update_fn,
+      update_global_fn=update_global_fn)
+  return net(embedder(graph))
 
 
 def train_val_pipeline(
   dataset, hyper_params: Dict[str, Any], net_params: Dict[str, Any], dirs, wandb_enabled=False):
 
   ds_train, ds_val, ds_test = dataset
-  # Assumed datasets already padded
+  # Pre pad the graphs
 
   net = hk.without_apply_rng(hk.transform(net_fn))
 
@@ -77,7 +122,7 @@ if __name__ == "__main__":
   if args.epochs:
     hyper_params["epochs"] = args.epochs
 
-  dataset = datasets.mutag()
+  dataset = datasets.load('mutag')
 
   if args.wandb:
     wandb.init(

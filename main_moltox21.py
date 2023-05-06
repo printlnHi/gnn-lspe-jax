@@ -107,7 +107,7 @@ if __name__ == "__main__":
   print("jax devices:", jax.devices())
   print()
   # ==================== Data ====================
-  dataset = datasets.moltox21()
+  dataset = datasets.load('moltox21')
   task_dims = dataset.task_dims()
 
   dataset.add_norms()

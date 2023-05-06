@@ -6,9 +6,17 @@
 set -e # Exit on single error
 
 repo_dir=$1
+if [ -z "${repo_dir}" ] ; then
+  echo "Error: no repo dir specified as first argument" >&2
+  exit 1
+fi
+if [ ! -d "${repo_dir}" ] ; then
+  echo "Error: ${repo_dir} is not a directory" >&2
+  exit 1
+fi
+cd "${repo_dir}"
 shift
 
-cd "${repo_dir}"
 source scripts/run_functions.sh
 
 fixed_wandb_run_names=(

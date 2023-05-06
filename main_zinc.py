@@ -107,7 +107,7 @@ if __name__ == "__main__":
   print("jax devices:", jax.devices())
   print()
   # ==================== Data ====================
-  dataset = datasets.zinc()
+  dataset = datasets.load('zinc')
   task_dims = dataset.task_dims()
   dataset.add_norms()
 
