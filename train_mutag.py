@@ -11,9 +11,9 @@ from types_and_aliases import (MutagEvaluateFn, Metrics, MutagTrainFn,
                                MutagTrainResult, LabelledGraph)
 
 
-def compute_loss(net: hk.Transformed, params: hk.Params, graph: jraph.GraphsTuple, label: jnp.ndarray,
-                 ) -> Tuple[jnp.ndarray, jnp.ndarray]:
+def compute_loss(net: hk.Transformed, params: hk.Params, batch: LabelledGraph) -> Tuple[jnp.ndarray, jnp.ndarray]:
   """Computes loss and accuracy."""
+  graph, label = batch
   pred_graph = net.apply(params, graph)
   preds = jax.nn.log_softmax(pred_graph.globals)
   targets = jax.nn.one_hot(label, 2)
@@ -35,11 +35,9 @@ def compute_loss(net: hk.Transformed, params: hk.Params, graph: jraph.GraphsTupl
   # Adapted from
   # https://github.com/deepmind/jraph/blob/master/jraph/ogb_examples/train.py
 
-# Assume ds already padded
-
 
 def train_epoch(net: hk.Transformed, params: hk.Params, opt_state: optax.OptState, opt_update: optax.TransformUpdateFn,
-                ds: List[Tuple[jraph.GraphsTuple, Any]]) -> MutagTrainResult:
+                ds: List[LabelledGraph]) -> MutagTrainResult:
 
   compute_loss_fn = functools.partial(compute_loss, net)
   # We jit the computation of our loss, since this is the main computation.

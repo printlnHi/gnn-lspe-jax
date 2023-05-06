@@ -97,8 +97,7 @@ class GatedGCNLSPELayer(hk.Module):
     else:
       w_sigma = jax.nn.sigmoid(eta)
 
-    # TODO: Turn to jraph
-    w_sigma_sum = jax.ops.segment_sum(
+    w_sigma_sum = jraph.segment_sum(
         w_sigma, segment_ids=i, num_segments=sum_n_node) + 1e-6
 
     unattnd_messages = V(jnp.concatenate([h[j], p[j]], axis=1)) * w_sigma

@@ -7,6 +7,7 @@ import jraph
 import optax
 
 LabelledGraph = Tuple[jraph.GraphsTuple, Any]
+LoadedData = Iterable[Tuple[LabelledGraph, int]]
 
 Metrics = Dict[str, float]
 
@@ -23,5 +24,3 @@ TrainResult = Tuple[hk.Params, hk.State, optax.OptState, Metrics]
 GraphClassifierInput: list[type] = [jraph.GraphsTuple, bool]
 GraphClassifierOutput = Tuple[jnp.ndarray, jraph.GraphsTuple]
 
-LoadedData = Iterable[Tuple[LabelledGraph, int]]
-# TODO: Cleanup unused type aliases

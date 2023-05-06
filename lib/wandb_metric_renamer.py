@@ -19,7 +19,7 @@ def do_for(paths, changes: Dict[str, str]):
     run.update()
 
 
-'''Example usage
+'''Example usage to remove accidental underscore
 ids = [
   'afnqkwfc',
   'z0uehfm2',

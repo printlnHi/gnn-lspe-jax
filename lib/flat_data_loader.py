@@ -1,12 +1,14 @@
 import time
+from typing import List
 
 import jraph
 import numpy as np
 
 from lib.padding import pad_labelled_graph
+from types_and_aliases import LabelledGraph, LoadedData
 
 
-def flat_data_loader(dataset, batch_size, padding_strategy, rng, print_time=False):
+def flat_data_loader(dataset, batch_size, padding_strategy, rng, print_time=False) -> LoadedData:
   start_time = time.time()
   n = len(dataset)
   length = (n + batch_size - 1) // batch_size
@@ -31,7 +33,7 @@ def flat_data_loader(dataset, batch_size, padding_strategy, rng, print_time=Fals
       batch_size for i in range(length)]
   unpadded_time = time.time()
 
-  labelled_graphs = [
+  labelled_graphs: List[LabelledGraph] = [
       pad_labelled_graph(
           (graph, label), padding_strategy) for graph, label in zip(
           graphs, labels)]

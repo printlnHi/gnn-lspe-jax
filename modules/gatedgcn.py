@@ -33,7 +33,6 @@ class GatedGCNLayer(hk.Module):
 
     """Applies a GatedGCN layer."""
 
-    # TODO: find another paper perhaps, list paper
     A = hk.Linear(output_dim, name="i_multiplication_edge_logits")
     B = hk.Linear(output_dim, name="j_multiplication_edge_logits")
     C = hk.Linear(output_dim, name="edge_multiplication_edge_logits")
@@ -43,7 +42,6 @@ class GatedGCNLayer(hk.Module):
     nodes, edges, receivers, senders, _, _, _ = graph
     h = nodes['feat']
     e = edges['feat']
-    # TODO: Do we only care about undirected graph
     i = senders
     j = receivers
 
@@ -72,7 +70,6 @@ class GatedGCNLayer(hk.Module):
     eta = A(h[i]) + B(h[j]) + C(e)
     HaikuDebug("eta", enable=debug)(eta)
 
-    # TODO: Check if batch norm parameters are the same as those of pytorch
     if self.mask_batch_norm:
       edge_mask = jraph.get_edge_padding_mask(graph)
       edge_layer_features = masked.BatchNorm(
@@ -102,7 +99,7 @@ class GatedGCNLayer(hk.Module):
 
     unattnd_messages = V(h[j]) * w_sigma
     agg_unattnd_messages = jax.ops.segment_sum(
-        unattnd_messages, i, num_segments=sum_n_node)  # TODO: i or j?
+        unattnd_messages, i, num_segments=sum_n_node)
     node_layer_features = U(h) + agg_unattnd_messages / w_sigma_sum
     if self.graph_norm:
       node_layer_features *= nodes['snorm_n'][:, None]
