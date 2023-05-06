@@ -4,14 +4,14 @@ from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 import haiku as hk
 import jax
+import jax.lax
 import jax.numpy as jnp
 import jraph
 import numpy as np
 import optax
-import jax.lax
 
-from types_and_aliases import LabelledGraph, Metrics, TrainResult, LoadedData
-from utils import graphLaplacian
+from lib.graphcalc import graphLaplacian
+from types_and_aliases import LabelledGraph, LoadedData, Metrics, TrainResult
 
 
 def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.State,

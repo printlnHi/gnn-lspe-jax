@@ -4,16 +4,15 @@ from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 import haiku as hk
 import jax
+import jax.lax
 import jax.numpy as jnp
 import jraph
 import numpy as np
 import optax
-import jax.lax
-
-from types_and_aliases import LabelledGraph, Metrics, TrainResult, LoadedData
-from utils import graphLaplacian
-
 from sklearn.metrics import roc_auc_score
+
+from lib.graphcalc import graphLaplacian
+from types_and_aliases import LabelledGraph, LoadedData, Metrics, TrainResult
 
 
 def compute_loss(net: hk.TransformedWithState, params: hk.Params, state: hk.State,
@@ -111,24 +110,6 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
 
   metrics = {"loss": float(loss), "ROC_AUC": float(ROC_AUC)} | time_metrics
   return params, state, opt_state, metrics
-
-
-def compare_elements(x, y):
-  return (jnp.equal(x, y)) | (jnp.isnan(x) & jnp.isnan(y))
-
-
-def find_differences(tree1, tree2):
-  flat_tree1, treedef1 = jax.tree_util.tree_flatten(tree1)
-  flat_tree2, treedef2 = jax.tree_util.tree_flatten(tree2)
-
-  if treedef1 != treedef2:
-    raise ValueError("Input pytrees have different structures.")
-
-  diff_flat_tree = [(compare_elements(x, y), x, y)
-                    for x, y in zip(flat_tree1, flat_tree2)]
-  diff_tree = jax.tree_util.tree_unflatten(treedef1, diff_flat_tree)
-
-  return diff_tree
 
 
 def evaluate_epoch(loss_fn, params: hk.Params, state: hk.State, ds: LoadedData) -> Metrics:

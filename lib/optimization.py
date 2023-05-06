@@ -1,17 +1,11 @@
 
-from functools import partial
-import time
-from typing import (Any, Callable, Collection, Dict, Iterator, NamedTuple, NewType,
-                    Optional, Tuple, Union)
-import typing_extensions
-import chex
+from typing import Any, Callable, Dict
 
-import haiku as hk
-import jax
-import jax.numpy as jnp
-import jraph
-import numpy as np
 import optax
+
+
+def create_optimizer(hyper_params: Dict[str, Any]) -> optax.GradientTransformation:
+  return optax.adamw(learning_rate=hyper_params["init_lr"], weight_decay=hyper_params["weight_decay"])
 
 
 def create_optimizer_with_learning_rate_hyperparam(hyper_params: Dict[str, Any]) -> optax.GradientTransformation:

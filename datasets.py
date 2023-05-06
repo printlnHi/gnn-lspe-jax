@@ -1,6 +1,7 @@
 import pickle
-from utils import pad_labelled_graph, monotonic_power_of_two_padding
+
 from data.molecule_jraph_dataset import MoleculeJraphDataset
+from lib.padding import monotonic_power_of_two_padding, pad_labelled_graph
 
 
 def mutag():

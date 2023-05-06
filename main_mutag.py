@@ -1,18 +1,15 @@
 import argparse
-import functools
 from typing import Any, Dict, List, Tuple
 
 import haiku as hk
 import jax
 import jax.numpy as jnp
-import jraph
-import optax
 
 import datasets
 import wandb
+from lib.optimization import create_optimizer
 from nets.mutag import net_fn
 from train_mutag import get_trainer_evaluator
-from utils import create_optimizer
 
 
 def train_val_pipeline(

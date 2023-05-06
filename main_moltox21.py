@@ -14,12 +14,13 @@ import optax
 
 import datasets
 import wandb
+from lib.flat_data_loader import flat_data_loader
+from lib.graphcalc import RWPE, lapPE
+from lib.optimization import (create_optimizer_with_learning_rate_hyperparam,
+                              create_reduce_lr_on_plateau)
+from lib.padding import GraphsSize, PaddingScheme, power_of_two_padding
 from nets import moltox21_model
-from optimization import (create_optimizer_with_learning_rate_hyperparam,
-                          create_reduce_lr_on_plateau)
 from train_moltox21 import compute_loss, evaluate_epoch, train_epoch
-from utils import (RWPE, GraphsSize, PaddingScheme, flat_data_loader, lapPE,
-                   power_of_two_padding)
 
 if __name__ == "__main__":
   # ==================== Load parameters ====================

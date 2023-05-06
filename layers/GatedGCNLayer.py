@@ -6,8 +6,8 @@ import jax.numpy as jnp
 import jax.tree_util as tree
 import jraph
 
-from utils import HaikuDebug
 import masked
+from lib.debug import HaikuDebug
 
 
 class GatedGCNLayer(hk.Module):
