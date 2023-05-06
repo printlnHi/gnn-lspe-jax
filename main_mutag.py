@@ -18,8 +18,6 @@ def train_val_pipeline(
   ds_train, ds_val, ds_test = dataset
   # Assumed datasets already padded
 
-  # TODO: Choose from multiple different nets using "model name" or enum or similar as parameter
-  # TODO: Use net_params to initialize net
   net = hk.without_apply_rng(hk.transform(net_fn))
 
   params = net.init(jax.random.PRNGKey(hyper_params["seed"]), ds_train[0][0])

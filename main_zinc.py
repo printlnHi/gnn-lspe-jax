@@ -242,7 +242,7 @@ if __name__ == "__main__":
       rng, subkey = jax.random.split(rng)
       params, state, opt_state, train_metrics = train_epoch_fn(
         params, state, subkey, opt_state, trainloader)
-      del subkey  # TODO: Do I want to keep deleting subkey? Looks ugly but prevents issues
+      del subkey
       if print_epoch_metrics:
         print(
             f'Epoch {epoch} - train loss: {train_metrics["loss"]}')
@@ -339,7 +339,6 @@ if __name__ == "__main__":
       # Only save the model or graph sizes if we are using wandb
       out_dir = os.path.join(args.out_dir, f"{run.name}-{run.id}")
       os.makedirs(out_dir, exist_ok=False)
-      # TODO: Save the model
 
       # json encode the graph sizes
       sizes_path = os.path.join(out_dir, "padded_graph_sizes.json")

@@ -2,7 +2,9 @@ wandb/
 .vscode/
 **/*.pyc
 **/*.pkl
+**/*.pkl*
 **/*.pickle
+**/*.pickle*
 *.ipynb
 **/*.ds_store
 out/**
