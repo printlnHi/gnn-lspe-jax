@@ -6,6 +6,7 @@ The following files are either directories copies or reduced versions rom the or
  - data/molecules.py
  - data/ogb_mol.py
 The files of configs/ are a slightly modified strict subset of the original config files.
+This replication is restricted to the GatedGCN layer and the ZINC and Moltox21 datasets. 
 
 # Replication
 ## Environment
@@ -38,11 +39,11 @@ scripts/download_datasets.sh
 python convert_datasets.py
 ```
 
+## Notebooks:
+Notebooks are provided for easy replication, iteration and adaption of the experiments. By default, they log their results via Weights and Biases.
+To replicate the results of Dwivedi et al. (2021), run the `DwivediReplication.ipynb` notebook. For each (architecture,task) pair it will train and evaluate the model for seeds 0 through to 3.
+To replicate further experimental results I cite in my Part II project, run the `FurtherExperiments.ipynb` notebook.
 
-## Replication of results from Dwivedi et al. (2021)
-Run the `DwivediReplication.ipynb` notebook. This will run the experiments and log the results in Weights and Biases.
-
-## Replication of further experiments 
 ## Individual runs:
 The following three examples are for ZINC but can be trivially adapted to Moltox21
 1. To train a single model on the ZINC task:

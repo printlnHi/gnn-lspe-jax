@@ -11,3 +11,4 @@ out/**
 scratch/**
 scratch*
 dataset/**
+!notebooks/**
