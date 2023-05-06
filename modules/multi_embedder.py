@@ -1,6 +1,5 @@
 import haiku as hk
 import jax.numpy as jnp
-import jax.lax
 
 
 class MultiEmbedder(hk.Module):
@@ -23,12 +22,7 @@ class MultiEmbedder(hk.Module):
                       for vocab_size in vocab_sizes]
 
   def __call__(self, ids):
-    #print(f"<ids ({ids.shape})> {ids} </ids>")
-    # print(self.embedders[0].params_dict())
-    # print(self.embedders[0].embeddings)
     embeddings = jnp.array([embedder(ids[:, i])
                            for i, embedder in enumerate(self.embedders)])
-    #print(f"<embeddings ({embeddings.shape})> {embeddings} </embeddings>")
     combined = jnp.sum(embeddings, axis=0)
-    #print(f"<combined ({combined.shape})> {combined} </combined>")
     return combined
