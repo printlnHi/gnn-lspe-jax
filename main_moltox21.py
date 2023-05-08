@@ -18,7 +18,7 @@ from lib.flat_data_loader import flat_data_loader
 from lib.graphcalc import RWPE, lapPE
 from lib.optimization import (create_optimizer_with_learning_rate_hyperparam,
                               create_reduce_lr_on_plateau)
-from lib.padding import GraphsSize, PaddingScheme, power_of_two_padding
+from lib.padding import GraphsSize, PaddingScheme, monotonic_power_of_two_padding, power_of_two_padding
 from nets import moltox21_model
 from train_moltox21 import compute_loss, evaluate_epoch, train_epoch
 
@@ -132,30 +132,36 @@ if __name__ == "__main__":
     train = train[:hyper_params["truncate_to"]]
     val = val[:hyper_params["truncate_to"]]
 
-  # We do power of two padding and count graph sizes along the way
+  # We do monotonic power of two padding and count graph sizes along the way
   padded_graph_sizes = Counter()
+  previous_padding = None
 
-  def padding_strategy(size: GraphsSize) -> GraphsSize:
-    padded_size = power_of_two_padding(
-        size, batch_size=hyper_params["batch_size"])
+  def train_padding_strategy(size: GraphsSize) -> GraphsSize:
+    global previous_padding
+    padded_size = monotonic_power_of_two_padding(
+      size, previous_padding, hyper_params["batch_size"])
+    previous_padding = padded_size
     if padded_size not in padded_graph_sizes:
       print("New padded_size:", padded_size)
     padded_graph_sizes[padded_size] += 1
     return padded_size
 
+  eval_padding_strategy = functools.partial(
+    power_of_two_padding, batch_size=hyper_params["batch_size"])
+
   rng = jax.random.PRNGKey(hyper_params["seed"])
   trainloader = functools.partial(flat_data_loader,
-                                  train, hyper_params["batch_size"], padding_strategy)
+                                  train, hyper_params["batch_size"], train_padding_strategy)
   valloader = flat_data_loader(
       val,
       hyper_params["batch_size"],
-      padding_strategy,
+      eval_padding_strategy,
       None)
 
   testloader = flat_data_loader(
       test,
       hyper_params["batch_size"],
-      padding_strategy,
+      eval_padding_strategy,
       None)
   # ============= Model, Train and Eval functions =============
 
