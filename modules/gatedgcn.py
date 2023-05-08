@@ -6,7 +6,7 @@ import jax.numpy as jnp
 import jax.tree_util as tree
 import jraph
 
-import lib.masked as masked
+import modules.masked as masked
 from lib.debug import HaikuDebug
 
 
