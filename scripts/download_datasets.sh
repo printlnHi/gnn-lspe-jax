@@ -6,5 +6,8 @@ wget -P data/molecules https://storage.googleapis.com/dm-educational/assets/grap
 # download ZINC. URL - from https://github.com/vijaydwivedi75/gnn-lspe/blob/main/data/script_download_ZINC.sh
 wget -P data/molecules https://data.dgl.ai/dataset/benchmarking-gnns/ZINC.pkl
 
+
+DIR="$(dirname "$(realpath "$0")")"
+
 echo "Converting datasets to MoleculeJraphDataset format"
-python datasets.py 
+python $DIR/../datasets.py 
