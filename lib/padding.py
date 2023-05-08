@@ -1,4 +1,4 @@
-from typing import Callable, NewType, Tuple
+from typing import Callable, NewType, Optional, Tuple
 
 import jraph
 import numpy as np
@@ -55,8 +55,12 @@ def fixed_batch_power_of_two_padding(
 
 
 def monotonic_power_of_two_padding(
-  size: GraphsSize, last_padding: GraphsSize, batch_size=None) -> GraphsSize:
+  size: GraphsSize, last_padding: Optional[GraphsSize], batch_size=None) -> GraphsSize:
   """Power of two padding except that the number of nodes and edges is monotonically increasing."""
+  # The last_padding should be none when the first graph is padded.
+  if last_padding == None:
+    return power_of_two_padding(size, batch_size)
+
   n_nodes, n_edges, n_graphs = size
   last_n_nodes, last_n_edges, last_n_graphs = last_padding
   n_nodes = max(_next_power_of_two(n_nodes) + 1, last_n_nodes)
