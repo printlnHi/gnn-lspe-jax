@@ -67,7 +67,7 @@ def train_epoch(loss_and_grad_fn, opt_update: optax.TransformUpdateFn, opt_apply
   for (batch, length), subkey in zip(batches, subkeys):
     if pe_init == "lap_pe":
       flip = jax.random.bernoulli(
-          subkey[0], shape=batch[0].nodes['pe'].shape[1]) * 2 - 1
+          subkey[0], shape=batch[0].nodes['pe'].shape[1:]) * 2 - 1
       batch[0].nodes['pe'] = batch[0].nodes['pe'] * flip
 
     batch_start = time.time()
