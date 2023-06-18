@@ -16,6 +16,12 @@ class MoleculeJraphDataset:
     self.bond_feature_dims = bond_feature_dims
     self.num_classes = num_classes
 
+  def task_dims(self):
+    dims = {'atom': self.atom_feature_dims, 'bond': self.bond_feature_dims}
+    if self.num_classes is not None:
+      dims['classes'] = self.num_classes
+    return dims
+
   def _map_across_graphs(self, fn: Callable[[LabelledGraph], LabelledGraph]):
     self.train = list(map(fn, self.train))
     self.test = list(map(fn, self.test))
@@ -42,9 +48,4 @@ class MoleculeJraphDataset:
       return (graph._replace(nodes=nodes), label)
     self._map_across_graphs(_add_norm)
 
-  def task_dims(self):
-    dims = {'atom': self.atom_feature_dims, 'bond': self.bond_feature_dims}
-    if self.num_classes is not None:
-      dims['classes'] = self.num_classes
-    return dims
    
