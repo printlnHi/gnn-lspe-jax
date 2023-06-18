@@ -1,11 +1,12 @@
 # GNN-LSPE-JAX
-First and foremost, this is a replication of Dwivedi et al. (2021) (arXiv:2110.07875).
+First and foremost, this is a replication of "Graph Neural Networks with Learnable Structural and Positional Representations" by Dwivedi et al. (2021) (arXiv:2110.07875).
+
 Their original PyTorch codebase can found at https://github.com/vijaydwivedi75/gnn-lspe, and is released under a MIT license (as of 06-May-2023).
 This replication is restricted to the GatedGCN layer and the ZINC and Moltox21 datasets. 
 
 This project contains JAX implementations of:
  - GatedGCN and GatedGCN-LSPE layers as Haiku Modules
- - GatedGCN and GatedGCN-LSPE models / net functions for ZINC-12K and OGBG-MOLTOX21 (as specified in Dwivedi et al. (2021)
+ - GatedGCN and GatedGCN-LSPE architectures / net functions for ZINC-12K and OGBG-MOLTOX21 (from Dwivedi et al. (2021)
  - Laplacian Positional Embeddings (LapPE) and Random Walk Positional Embeddings (RWPE)
  - Training on the ZINC and Moltox21 molecular Benchmarks
     
