@@ -3,6 +3,12 @@ First and foremost, this is a replication of Dwivedi et al. (2021) (arXiv:2110.0
 Their original PyTorch codebase can found at https://github.com/vijaydwivedi75/gnn-lspe, and is released under a MIT license (as of 06-May-2023).
 This replication is restricted to the GatedGCN layer and the ZINC and Moltox21 datasets. 
 
+This project contains JAX implementations of:
+ - GatedGCN and GatedGCN-LSPE layers as Haiku Modules
+ - GatedGCN and GatedGCN-LSPE models / net functions for ZINC-12K and OGBG-MOLTOX21 (as specified in Dwivedi et al. (2021)
+ - Laplacian Positional Embeddings (LapPE) and Random Walk Positional Embeddings (RWPE)
+ - Training on the ZINC and Moltox21 molecular Benchmarks
+    
 Some files in this repository are either direct or modified copies from the aforementioned codebase, and are marked as such by a LICENSE file in the containing directory. Copyright belongs to the original authors.
 
 Directories of copied files:
@@ -10,12 +16,6 @@ Directories of copied files:
  - configs/
 
 The files of configs/ are a slightly modified subset of the original config files.
-
-This project contains JAX implementations of:
- - GatedGCN and GatedGCN-LSPE layers as Haiku Modules
- - GatedGCN and GatedGCN-LSPE models / net functions for ZINC-12K and OGBG-MOLTOX21 (as specified in Dwivedi et al. (2021)
- - Laplacian Positional Embeddings (LapPE) and Random Walk Positional Embeddings (RWPE)
-  - Training on the ZINC and Moltox21 molecular Benchmarks
 
 # Replication
 ## Environment
