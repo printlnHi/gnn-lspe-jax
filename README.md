@@ -1,5 +1,5 @@
 # GNN-LSPE-JAX
-This is a JAX replication of "Graph Neural Networks with Learnable Structural and Positional Representations" by Dwivedi et al. (2021) (arXiv:2110.07875) for my Cambridge Computer Science Tripos Part II dissertation.
+This is a JAX, Haiku and Jraph replication of "Graph Neural Networks with Learnable Structural and Positional Representations" by Dwivedi et al. (2021) (arXiv:2110.07875) for my Cambridge Computer Science Tripos Part II dissertation.
 
 Their original PyTorch codebase can found at https://github.com/vijaydwivedi75/gnn-lspe, and is released under a MIT license (as of 06-May-2023).
 This replication is restricted to the GatedGCN layer and the ZINC and Moltox21 datasets. 
