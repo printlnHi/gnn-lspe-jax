@@ -11,6 +11,12 @@ Directories of copied files:
 
 The files of configs/ are a slightly modified subset of the original config files.
 
+This project contains JAX implementations of:
+ - GatedGCN and GatedGCN-LSPE layers as Haiku Modules
+ - GatedGCN and GatedGCN-LSPE models / net functions for ZINC-12K and OGBG-MOLTOX21 (as specified in Dwivedi et al. (2021)
+ - Laplacian Positional Embeddings (LapPE) and Random Walk Positional Embeddings (RWPE)
+  - Training on the ZINC and Moltox21 molecular Benchmarks
+
 # Replication
 ## Environment
 To allow for easy replication, there are three methods of environment creation: 
@@ -58,7 +64,7 @@ python main_zinc.py --config configs/GatedGCN_ZINC_<PE>.json [options]
 2. To train a model on the ZINC task for seeds 0 through to 9:
 ```bash
 source scripts/run_functions.sh
-run_zinc_with_seeds 0 9 --config configs/GatedGCN_ZINC_<PE>.json [options]
+zinc_multi_run 0 9 --config configs/GatedGCN_ZINC_<PE>.json [options]
 ```
 
 3. To train a model on the ZINC task for seeds 0 through to 9 for all positional encoding:

@@ -1,6 +1,6 @@
 #!/bin/zsh
 cd `dirname $0`/..
-exclude_files=("./data/molecules.py" "./data/ogb_mol.py" "./notebook.py" "./wandb/*")
+exclude_files=("./data/*" "./wandb/*")
 exclusions=$(printf "-o -path %s " $exclude_files)
 
 count=0
