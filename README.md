@@ -10,11 +10,11 @@ This project contains JAX implementations of:
  - Laplacian and Random Walk Positional Embeddings (LapPE and RWPE)
  - Training on the ZINC and Moltox21 molecular Benchmarks
 
-# Quicksart notebooks: replication:
-Notebooks are provided for easy replication, iteration and adaption of the experiments. By default, they log their results via Weights and Biases, and require a WandB key at the top of the notebook.
-To confirm that my JAX implementations replicate the results of Dwivedi et al. (2021) run the `DwivediReplication.ipynb` notebook. For each (architecture,task) pair it will train and evaluate the model for seeds 0 through to 3.
-To replicate further experimental results I cite in my Part II project, run the `FurtherExperiments.ipynb` notebook.
-`InspectData.ipynb` is provided to allow for easy inspection of the train/val/test split of the ZINC and Moltox21 dataset.
+# Quicksart notebooks
+Notebooks are provided for easy replication, iteration and adaption of the experiments. By default, they log their results via Weights and Biases, and require a WandB key at the top of the notebook:
+ - To confirm that my JAX implementations replicate the results of Dwivedi et al. (2021) run the `DwivediReplication.ipynb` notebook. For each (architecture,task) pair it will train and evaluate the model for seeds 0 through to 3.
+ - To replicate further experimental results I cite in my Part II project, run the `FurtherExperiments.ipynb` notebook.
+ - `InspectData.ipynb` is provided to allow for easy inspection of the train/val/test split of the ZINC and Moltox21 dataset.
 
 # Replication
 ## Environment
